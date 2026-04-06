@@ -1,0 +1,22 @@
+# Godot
+.godot/
+*.import
+export_presets.cfg
+*.translation
+
+# Mono/C#
+.mono/
+bin/
+obj/
+*.csproj
+*.sln
+*.user
+*.userprefs
+.vscode/
+
+# Build artifacts
+build/
+
+# OS specific
+.DS_Store
+Thumbs.db
