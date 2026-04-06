@@ -2,34 +2,36 @@ using Godot;
 
 namespace Terrabellum.Rendering;
 
-public partial class TableView : Node2D
+public partial class TableView : Node3D
 {
-    private Sprite2D _terrainSprite = new();
+    private MeshInstance3D _terrainMesh = new();
 
     public override void _Ready()
     {
         Name = "TableView";
-        AddChild(_terrainSprite);
+        AddChild(_terrainMesh);
         
-        // Ensure it draws behind everything else
-        ZIndex = -100;
+        var plane = new PlaneMesh();
+        plane.Size = new Vector2(2048, 2048);
+        _terrainMesh.Mesh = plane;
 
-        // Default placeholder if no texture is found
-        _terrainSprite.Texture = GD.Load<Texture2D>("res://assets/textures/terrain/default.jpg") ?? CreatePlaceholder();
-        _terrainSprite.Centered = false;
+        var material = new StandardMaterial3D();
+        material.AlbedoTexture = GD.Load<Texture2D>("res://assets/textures/terrain/default.jpg") ?? CreatePlaceholder();
+        _terrainMesh.SetSurfaceOverrideMaterial(0, material);
     }
 
     private Texture2D CreatePlaceholder()
     {
-        var image = Image.Create(2048, 2048, false, Image.Format.Rgba8);
-        image.Fill(new Color(0.1f, 0.15f, 0.1f)); // Dark green "table"
-        
-        // Draw a simple noise or pattern if we wanted, but solid color is fine for now
+        var image = Image.CreateEmpty(2048, 2048, false, Image.Format.Rgba8);
+        image.Fill(new Color(0.1f, 0.15f, 0.1f)); 
         return ImageTexture.CreateFromImage(image);
     }
     
     public void SetTerrain(Texture2D texture)
     {
-        _terrainSprite.Texture = texture;
+        if (_terrainMesh.GetSurfaceOverrideMaterial(0) is StandardMaterial3D mat)
+        {
+            mat.AlbedoTexture = texture;
+        }
     }
 }

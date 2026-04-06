@@ -3,68 +3,65 @@ using Terrabellum.Core;
 
 namespace Terrabellum.Rendering;
 
-public partial class UnitView : Node2D
+public partial class UnitView : Node3D
 {
 	private Unit _unit;
 	public Color PlayerColor { get; set; } = Colors.White;
 
+	private MeshInstance3D _baseMesh = new();
+	private Label3D _label = new();
+
 	public UnitView(Unit unit)
 	{
 		_unit = unit;
-		// Sync initial position
-		Position = new Vector2(_unit.Position.X, _unit.Position.Y);
-		Rotation = _unit.Rotation;
+		Position = new Vector3(_unit.Position.X, 0, _unit.Position.Y);
+		Rotation = new Vector3(0, -_unit.Rotation, 0);
 	}
 
-	public override void _Process(double delta)
+	public override void _Ready()
 	{
-		// Simple one-way sync from logic to view for now
-		Position = new Vector2(_unit.Position.X, _unit.Position.Y);
-		Rotation = _unit.Rotation;
+		AddChild(_baseMesh);
+		AddChild(_label);
+		SetupVisuals();
 	}
 
-	public override void _Draw()
+	private void SetupVisuals()
 	{
 		float size = _unit.Definition.BaseSize;
 		float radius = size / 2.0f;
 
+		var material = new StandardMaterial3D { AlbedoColor = PlayerColor };
+
 		switch (_unit.Definition.BaseShape)
 		{
 			case BaseShape.Circle:
-				DrawCircle(Vector2.Zero, radius, PlayerColor);
-				DrawArc(Vector2.Zero, radius, 0, Mathf.Pi * 2, 64, Colors.Black, 2.0f);
+				var cylinder = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f };
+				_baseMesh.Mesh = cylinder;
+				_baseMesh.Position = new Vector3(0, 1.0f, 0);
 				break;
 			case BaseShape.Square:
-				Rect2 rect = new Rect2(-radius, -radius, size, size);
-				DrawRect(rect, PlayerColor);
-				DrawRect(rect, Colors.Black, false, 2.0f);
+				var box = new BoxMesh { Size = new Vector3(size, 2.0f, size) };
+				_baseMesh.Mesh = box;
+				_baseMesh.Position = new Vector3(0, 1.0f, 0);
 				break;
 			case BaseShape.Hex:
-				DrawHex(radius, PlayerColor);
+				var hex = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f, RadialSegments = 6 };
+				_baseMesh.Mesh = hex;
+				_baseMesh.Position = new Vector3(0, 1.0f, 0);
 				break;
 		}
+		_baseMesh.SetSurfaceOverrideMaterial(0, material);
 
-		// Facing Indicator
-		DrawLine(Vector2.Zero, Vector2.Right * radius, Colors.Black, 2.0f);
-
-		// Label
-		var font = ThemeDB.FallbackFont;
-		DrawString(font, new Vector2(-radius, -radius - 10), _unit.CustomName, HorizontalAlignment.Center, size, 14, Colors.White);
+		_label.Text = _unit.CustomName;
+		_label.FontSize = 64;
+		_label.PixelSize = 0.15f;
+		_label.Billboard = BaseMaterial3D.BillboardModeEnum.Enabled;
+		_label.Position = new Vector3(0, 10.0f + radius, 0);
 	}
 
-	private void DrawHex(float radius, Color color)
+	public override void _Process(double delta)
 	{
-		Vector2[] points = new Vector2[6];
-		for (int i = 0; i < 6; i++)
-		{
-			float angle = Mathf.DegToRad(i * 60);
-			points[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-		}
-
-		DrawColoredPolygon(points, color);
-		for (int i = 0; i < 6; i++)
-		{
-			DrawLine(points[i], points[(i + 1) % 6], Colors.Black, 2.0f);
-		}
+		Position = new Vector3(_unit.Position.X, 0, _unit.Position.Y);
+		Rotation = new Vector3(0, -_unit.Rotation, 0);
 	}
 }

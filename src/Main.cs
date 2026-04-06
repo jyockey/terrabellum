@@ -13,7 +13,10 @@ public partial class Main : Node
 
     public override void _Ready()
     {
-        GD.Print("Terrabellum Initializing...");
+        GD.Print("Terrabellum Initializing (3D)...");
+
+        // Setup 3D Environment
+        SetupEnvironment();
 
         // Setup Table
         var tableView = new TableView();
@@ -22,13 +25,16 @@ public partial class Main : Node
         // Setup Camera
         var camera = new CameraController();
         AddChild(camera);
+        camera.Position = new Vector3(0, 500, 0);
+        // Explicitly tell Godot that "Up" on screen should be World -Z
+        camera.LookAt(Vector3.Zero, new Vector3(0, 0, -1));
 
         // Dice Setup
         for (int i = 0; i < 3; i++)
         {
             var die = new Die(6);
             var dieView = new DieView(die);
-            dieView.Position = new Vector2(50 + (i * 60), 600);
+            dieView.Position = new Vector3(-300 + (i * 60), 0, 400);
             AddChild(dieView);
             _diceViews.Add(dieView);
         }
@@ -65,9 +71,31 @@ public partial class Main : Node
         };
 
         // 2. Spawn units
-        SpawnUnit(orcDefinition, new System.Numerics.Vector2(100, 100), Colors.Green);
-        SpawnUnit(marineDefinition, new System.Numerics.Vector2(300, 100), Colors.Blue);
-        SpawnUnit(tankDefinition, new System.Numerics.Vector2(200, 300), Colors.Blue);
+        SpawnUnit(orcDefinition, new System.Numerics.Vector2(-100, -100), Colors.Green);
+        SpawnUnit(marineDefinition, new System.Numerics.Vector2(100, -100), Colors.Blue);
+        SpawnUnit(tankDefinition, new System.Numerics.Vector2(0, 100), Colors.Blue);
+    }
+
+    private void SetupEnvironment()
+    {
+        // Directional Light
+        var light = new DirectionalLight3D();
+        light.RotationDegrees = new Vector3(-45, 45, 0);
+        light.ShadowEnabled = true;
+        AddChild(light);
+
+        // World Environment
+        var env = new WorldEnvironment();
+        var sky = new Sky();
+        sky.SkyMaterial = new ProceduralSkyMaterial();
+        
+        var environment = new Godot.Environment();
+        environment.BackgroundMode = Godot.Environment.BGMode.Sky;
+        environment.Sky = sky;
+        environment.AmbientLightSource = Godot.Environment.AmbientSource.Sky;
+        
+        env.Environment = environment;
+        AddChild(env);
     }
 
     private void SpawnUnit(UnitDefinition def, System.Numerics.Vector2 position, Color playerColor)

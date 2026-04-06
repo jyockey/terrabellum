@@ -2,24 +2,30 @@ using Godot;
 
 namespace Terrabellum.Rendering;
 
-public partial class CameraController : Camera2D
+public partial class CameraController : Camera3D
 {
-    private float _zoomSpeed = 0.1f;
-    private float _minZoom = 0.1f;
-    private float _maxZoom = 5.0f;
+    private float _panSpeed = 2.0f;
+    private float _zoomSpeed = 20.0f;
+    private float _minHeight = 100.0f;
+    private float _maxHeight = 2000.0f;
 
     public override void _Ready()
     {
-        // Set initial zoom
-        Zoom = Vector2.One;
+        // Initial setup for top-down view
+        // We rely on Main.cs to call LookAt or set rotation for initial orientation
+        Projection = ProjectionType.Perspective;
+        Far = 4000.0f;
+        Current = true;
     }
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        // Panning with Middle Mouse Button
+        // Panning with Middle Mouse Button on XZ plane
         if (@event is InputEventMouseMotion mouseMotion && Input.IsMouseButtonPressed(MouseButton.Middle))
         {
-            Position -= mouseMotion.Relative / Zoom;
+            float factor = Position.Y / 500.0f;
+            Vector3 delta = new Vector3(-mouseMotion.Relative.X * factor, 0, -mouseMotion.Relative.Y * factor);
+            Position += delta;
         }
 
         // Zooming with Mouse Wheel
@@ -27,26 +33,19 @@ public partial class CameraController : Camera2D
         {
             if (mouseButton.ButtonIndex == MouseButton.WheelUp)
             {
-                AdjustZoom(1.0f + _zoomSpeed);
+                AdjustZoom(-_zoomSpeed);
             }
             else if (mouseButton.ButtonIndex == MouseButton.WheelDown)
             {
-                AdjustZoom(1.0f - _zoomSpeed);
+                AdjustZoom(_zoomSpeed);
             }
         }
     }
 
-    private void AdjustZoom(float factor)
+    private void AdjustZoom(float amount)
     {
-        Vector2 mousePos = GetGlobalMousePosition();
-        
-        Vector2 newZoom = Zoom * factor;
-        newZoom = newZoom.Clamp(Vector2.One * _minZoom, Vector2.One * _maxZoom);
-        
-        Zoom = newZoom;
-
-        // Reposition camera so the mouse stays over the same world-space coordinate
-        Vector2 newMousePos = GetGlobalMousePosition();
-        Position += (mousePos - newMousePos);
+        Vector3 newPos = Position;
+        newPos.Y = Mathf.Clamp(newPos.Y + amount, _minHeight, _maxHeight);
+        Position = newPos;
     }
 }
