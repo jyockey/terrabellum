@@ -1,0 +1,7 @@
+{
+  "$schema": "../schemas/game_config.schema.json",
+  "Name": "Warcrow",
+  "MovementStyle": "Free",
+  "MeasurementUnit": "Inches",
+  "UnitsPerMeasurement": 25.4
+}

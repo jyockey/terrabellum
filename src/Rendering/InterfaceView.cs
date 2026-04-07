@@ -9,6 +9,7 @@ public partial class InterfaceView : CanvasLayer
     public enum InteractionMode { Move, Measure }
     public InteractionMode CurrentMode { get; private set; } = InteractionMode.Move;
     private Dictionary<InteractionMode, Button> _modeButtons = new();
+    private readonly GameConfig _config;
 
     private Line2D _measureLine = new();
     private Label _measureLabel = new();
@@ -19,6 +20,11 @@ public partial class InterfaceView : CanvasLayer
     private MovementPath? _activeMovement;
     private Line2D _pathLine = new();
     private Label _pathLabel = new();
+
+    public InterfaceView(GameConfig config)
+    {
+        _config = config;
+    }
 
     public override void _Ready()
     {
@@ -148,7 +154,9 @@ public partial class InterfaceView : CanvasLayer
         screenPoints.Add(camera.UnprojectPosition(new Vector3(terminalPos.X, 0, terminalPos.Y)));
 
         _pathLine.Points = screenPoints.ToArray();
-        _pathLabel.Text = $"{(int)_activeMovement.GetTotalDistance(terminalPos)} px";
+        
+        float distance = _activeMovement.GetTotalDistance(terminalPos) / _config.UnitsPerMeasurement;
+        _pathLabel.Text = $"{distance:F1}{_config.UnitSuffix}";
         _pathLabel.Position = screenPoints[screenPoints.Count - 1] + new Vector2(15, 15);
         _pathLabel.Show();
     }
@@ -208,8 +216,20 @@ public partial class InterfaceView : CanvasLayer
             if (_measureLine.GetPointCount() > 1)
                 _measureLine.SetPointPosition(1, mouseMotion.Position);
             
-            float dist = _measureStartPos.DistanceTo(mouseMotion.Position);
-            _measureLabel.Text = $"{(int)dist} px";
+            var camera = GetViewport().GetCamera3D();
+            if (camera != null)
+            {
+                Vector3 startWorld = GetGroundPos(camera, _measureStartPos);
+                Vector3 endWorld = GetGroundPos(camera, mouseMotion.Position);
+                float dist = (endWorld - startWorld).Length() / _config.UnitsPerMeasurement;
+                _measureLabel.Text = $"{dist:F1}{_config.UnitSuffix}";
+            }
+            else
+            {
+                float dist = _measureStartPos.DistanceTo(mouseMotion.Position);
+                _measureLabel.Text = $"{(int)dist} px";
+            }
+            
             _measureLabel.Position = mouseMotion.Position + new Vector2(15, 15);
         }
     }

@@ -8,6 +8,8 @@ namespace Terrabellum;
 public partial class Main : Node
 {
     public Tabletop Tabletop => _tabletop;
+    public GameConfig Config { get; private set; } = new();
+
     private Tabletop _tabletop = new();
     private List<UnitView> _unitViews = new();
     private List<DieView> _diceViews = new();
@@ -17,8 +19,13 @@ public partial class Main : Node
     {
         GD.Print("Terrabellum Initializing (3D)...");
 
+        // Load Game Config
+        string configPath = ProjectSettings.GlobalizePath("res://config/games/warcrow.json");
+        Config = GameConfig.LoadFromFile(configPath) ?? new GameConfig { Name = "Default" };
+        GD.Print($"Loaded Game Config: {Config.Name} ({Config.MeasurementUnit})");
+
         // Setup UI
-        _interfaceView = new InterfaceView();
+        _interfaceView = new InterfaceView(Config);
         AddChild(_interfaceView);
 
         // Setup 3D Environment

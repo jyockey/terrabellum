@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GameConfig",
+  "type": "object",
+  "properties": {
+    "Name": { "type": "string" },
+    "MovementStyle": { "enum": ["Free", "Grid", "Hex"] },
+    "MeasurementUnit": { "enum": ["Inches", "Centimeters", "Pixels"] },
+    "UnitsPerMeasurement": { "type": "number", "default": 1.0 }
+  },
+  "required": ["Name", "MovementStyle", "MeasurementUnit"]
+}
