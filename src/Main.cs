@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using System.Linq;
 using Terrabellum.Core;
 using Terrabellum.Rendering;
 
@@ -41,18 +42,9 @@ public partial class Main : Node
         var camera = new CameraController();
         AddChild(camera);
         camera.Position = new Vector3(0, 500, 0);
-        // Explicitly tell Godot that "Up" on screen should be World -Z
         camera.LookAt(Vector3.Zero, new Vector3(0, 0, -1));
 
-        // Dice Setup
-        for (int i = 0; i < 3; i++)
-        {
-            var die = new Die(6);
-            var dieView = new DieView(die);
-            dieView.Position = new Vector3(-300 + (i * 60), 0, 400);
-            AddChild(dieView);
-            _diceViews.Add(dieView);
-        }
+        SetupDice();
 
         // 1. Create dummy definitions
         var orcDefinition = new UnitDefinition
@@ -97,6 +89,8 @@ public partial class Main : Node
         var light = new DirectionalLight3D();
         light.RotationDegrees = new Vector3(-45, 45, 0);
         light.ShadowEnabled = true;
+        light.LightEnergy = 0.8f;
+        light.ShadowBias = 0.05f;
         AddChild(light);
 
         // World Environment
@@ -108,9 +102,24 @@ public partial class Main : Node
         environment.BackgroundMode = Godot.Environment.BGMode.Sky;
         environment.Sky = sky;
         environment.AmbientLightSource = Godot.Environment.AmbientSource.Sky;
+        environment.AmbientLightEnergy = 0.2f;
         
         env.Environment = environment;
         AddChild(env);
+    }
+
+    private void SetupDice()
+    {
+        float startX = -(Config.Dice.Count - 1) * 60; 
+        for (int i = 0; i < Config.Dice.Count; i++)
+        {
+            var def = Config.Dice[i];
+            var die = new Die(def.Name, def.Faces.ToArray());
+            var dieView = new DieView(die);
+            dieView.Position = new Vector3(startX + (i * 120), 10, 400);
+            AddChild(dieView);
+            _diceViews.Add(dieView);
+        }
     }
 
     private void SpawnUnit(UnitDefinition def, System.Numerics.Vector2 position, Color playerColor)

@@ -20,6 +20,12 @@ public enum MeasurementUnit
     Pixels
 }
 
+public class DiceDefinition
+{
+    public string Name { get; set; } = string.Empty;
+    public List<string> Faces { get; set; } = new();
+}
+
 public class GameConfig
 {
     public string Name { get; set; } = string.Empty;
@@ -28,6 +34,8 @@ public class GameConfig
     
     // How many world units represent one measurement unit (e.g., 100 units = 1 inch)
     public float UnitsPerMeasurement { get; set; } = 1.0f;
+
+    public List<DiceDefinition> Dice { get; set; } = new();
     
     public string UnitSuffix => MeasurementUnit switch
     {
