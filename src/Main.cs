@@ -11,9 +11,11 @@ public partial class Main : Node
     public GameConfig Config { get; private set; } = new();
 
     private Tabletop _tabletop = new();
-    private List<UnitView> _unitViews = new();
+    private Dictionary<Unit, UnitView> _unitViews = new();
     private List<DieView> _diceViews = new();
     private InterfaceView? _interfaceView;
+
+    public UnitView? GetUnitView(Unit unit) => _unitViews.GetValueOrDefault(unit);
 
     public override void _Ready()
     {
@@ -127,7 +129,7 @@ public partial class Main : Node
         };
         
         AddChild(view);
-        _unitViews.Add(view);
+        _unitViews[unit] = view;
     }
 
     public override void _UnhandledInput(InputEvent @event)

@@ -122,12 +122,17 @@ public partial class InterfaceView : CanvasLayer
             {
                 if (mouseBtn.DoubleClick)
                 {
-                    _activeMovement.Finalize(logicalPos);
+                    // Use actual unit position for finality to ensure no collision at end
+                    _activeMovement.Finalize(_activeMovement.Unit.Position);
                     CancelMovement();
                 }
                 else
                 {
-                    _activeMovement.AddWaypoint(logicalPos);
+                    // Only add waypoint if it doesn't cause a collision
+                    if (!IsCollisionAt(_activeMovement.Unit, logicalPos))
+                    {
+                        _activeMovement.AddWaypoint(logicalPos);
+                    }
                 }
             }
         }
@@ -137,9 +142,38 @@ public partial class InterfaceView : CanvasLayer
             Vector3 groundPos = GetGroundPos(camera, mouseMotion.Position);
             System.Numerics.Vector2 logicalPos = new(groundPos.X, groundPos.Z);
             
-            _activeMovement.Unit.Position = logicalPos;
-            UpdatePathVisuals(camera, logicalPos);
+            if (!IsCollisionAt(_activeMovement.Unit, logicalPos))
+            {
+                _activeMovement.Unit.Position = logicalPos;
+            }
+            UpdatePathVisuals(camera, _activeMovement.Unit.Position);
         }
+    }
+
+    private bool IsCollisionAt(Unit unit, System.Numerics.Vector2 pos)
+    {
+        var spaceState = GetViewport().World3D.DirectSpaceState;
+        
+        var main = GetTree().Root.GetNodeOrNull<Main>("Main");
+        if (main == null) return false;
+
+        UnitView? movingView = main.GetUnitView(unit);
+        if (movingView == null) return false;
+
+        var shape = movingView.GetNodeOrNull<CollisionShape3D>("StaticBody3D/CollisionShape3D");
+        if (shape == null || shape.Shape == null) return false;
+
+        var query = new PhysicsShapeQueryParameters3D();
+        query.Shape = shape.Shape;
+        // Logical (X, Y) -> World (X, 0, Z)
+        // Ensure we check at the correct height (1.0f as set in UnitView)
+        query.Transform = new Transform3D(Basis.Identity, new Vector3(pos.X, 1.0f, pos.Y));
+        // Exclude the moving unit's own body
+        var body = movingView.GetNodeOrNull<StaticBody3D>("StaticBody3D");
+        if (body != null) query.Exclude = new Godot.Collections.Array<Rid> { body.GetRid() };
+
+        var result = spaceState.IntersectShape(query, 1);
+        return result.Count > 0;
     }
 
     private void UpdatePathVisuals(Camera3D camera, System.Numerics.Vector2 terminalPos)

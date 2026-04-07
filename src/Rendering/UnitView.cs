@@ -12,6 +12,8 @@ public partial class UnitView : Node3D
 
 	private MeshInstance3D _baseMesh = new();
 	private Label3D _label = new();
+	private StaticBody3D _body = new();
+	private CollisionShape3D _collisionShape = new();
 
 	public UnitView(Unit unit)
 	{
@@ -22,7 +24,12 @@ public partial class UnitView : Node3D
 
 	public override void _Ready()
 	{
-		AddChild(_baseMesh);
+		_body.Name = "StaticBody3D";
+		_collisionShape.Name = "CollisionShape3D";
+		
+		AddChild(_body);
+		_body.AddChild(_baseMesh);
+		_body.AddChild(_collisionShape);
 		AddChild(_label);
 		SetupVisuals();
 	}
@@ -34,25 +41,37 @@ public partial class UnitView : Node3D
 
 		var material = new StandardMaterial3D { AlbedoColor = PlayerColor };
 
+		Shape3D godotShape;
+
 		switch (_unit.Definition.BaseShape)
 		{
 			case BaseShape.Circle:
 				var cylinder = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f };
 				_baseMesh.Mesh = cylinder;
 				_baseMesh.Position = new Vector3(0, 1.0f, 0);
+				godotShape = new CylinderShape3D { Radius = radius, Height = 2.0f };
 				break;
 			case BaseShape.Square:
 				var box = new BoxMesh { Size = new Vector3(size, 2.0f, size) };
 				_baseMesh.Mesh = box;
 				_baseMesh.Position = new Vector3(0, 1.0f, 0);
+				godotShape = new BoxShape3D { Size = new Vector3(size, 2.0f, size) };
 				break;
 			case BaseShape.Hex:
 				var hex = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f, RadialSegments = 6 };
 				_baseMesh.Mesh = hex;
 				_baseMesh.Position = new Vector3(0, 1.0f, 0);
+				// We'll use a cylinder for hex collision as it's a close approximation
+				godotShape = new CylinderShape3D { Radius = radius, Height = 2.0f };
+				break;
+			default:
+				godotShape = new SphereShape3D { Radius = radius };
 				break;
 		}
+
 		_baseMesh.SetSurfaceOverrideMaterial(0, material);
+		_collisionShape.Shape = godotShape;
+		_collisionShape.Position = new Vector3(0, 1.0f, 0);
 
 		_label.Text = _unit.CustomName;
 		_label.FontSize = 64;
