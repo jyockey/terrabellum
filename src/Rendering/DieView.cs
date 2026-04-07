@@ -93,8 +93,9 @@ public partial class DieView : Node3D
         if (_metadata == null || !_metadata.ContainsKey(modelName)) return;
 
         var faces = _metadata[modelName];
-        foreach (var face in faces)
+        for (int i = 0; i < faces.Count; i++)
         {
+            var face = faces[i];
             var normal = new Vector3(face.Normal[0], face.Normal[1], face.Normal[2]);
             foreach (var labelMeta in face.Labels)
             {
@@ -104,8 +105,19 @@ public partial class DieView : Node3D
                 string text = labelMeta.Text;
                 if (labelMeta.VertexIdx.HasValue)
                 {
-                    // Special case for D4: label text is determined by the vertex index
-                    text = _die.Faces[labelMeta.VertexIdx.Value];
+                    // For d4, result is based on vertex index
+                    if (labelMeta.VertexIdx.Value < _die.Faces.Length)
+                    {
+                        text = _die.Faces[labelMeta.VertexIdx.Value];
+                    }
+                }
+                else
+                {
+                    // For others, result is based on face index
+                    if (i < _die.Faces.Length)
+                    {
+                        text = _die.Faces[i];
+                    }
                 }
                 
                 AddFaceLabel(text, pos, normal, up);
@@ -164,28 +176,28 @@ public partial class DieView : Node3D
         if (_die.LastResultIndex >= faces.Count) return;
 
         // For all dice except D4, the 'result' is the face pointing UP.
-        // For D4, our generator associates face index with result vertex index for simplicity.
-        // If result is vertex 0, we want to point the face OPPOSITE vertex 0 DOWN.
-        // Actually, let's keep it consistent: Point normal of index LastResultIndex UP.
-        // For D4, I will adjust the generator so pointing face i UP makes it land on a face.
+        // For D4, our generator associates face index with result vertex index.
+        // Pointing the face normal UP makes the die land on that face (if it's the bottom face).
+        // My D4 generator: face 0 is the bottom face (Normal points DOWN). 
+        // If result is 1 (index 0), we want face 0 normal pointing DOWN.
         
-        var targetNormal = new Vector3(faces[_die.LastResultIndex].Normal[0], faces[_die.LastResultIndex].Normal[1], faces[_die.LastResultIndex].Normal[2]);
-        Vector3 worldUp = Vector3.Up;
+        var face = faces[_die.LastResultIndex];
+        var targetNormal = new Vector3(face.Normal[0], face.Normal[1], face.Normal[2]);
+        
+        Vector3 worldTarget = (modelName == "d4") ? Vector3.Down : Vector3.Up;
 
-        // If we point a face normal UP, it lands on that face. 
-        // This is correct for all dice including D4 in my new generator.
-        if (targetNormal.IsEqualApprox(worldUp))
+        if (targetNormal.IsEqualApprox(worldTarget))
         {
             _mesh.Basis = Basis.Identity;
         }
-        else if (targetNormal.IsEqualApprox(-worldUp))
+        else if (targetNormal.IsEqualApprox(-worldTarget))
         {
             _mesh.Basis = new Basis(Vector3.Right, Mathf.Pi);
         }
         else
         {
-            Vector3 axis = targetNormal.Cross(worldUp).Normalized();
-            float angle = Mathf.Acos(targetNormal.Dot(worldUp));
+            Vector3 axis = targetNormal.Cross(worldTarget).Normalized();
+            float angle = Mathf.Acos(targetNormal.Dot(worldTarget));
             _mesh.Basis = new Basis(axis, angle);
         }
     }

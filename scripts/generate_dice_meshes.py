@@ -55,7 +55,7 @@ def write_obj(name, vertices, faces):
                 lu = [v[i] - center[i] for i in range(3)]
                 lmag = math.sqrt(sum(x*x for x in lu))
                 lu = [x/lmag for x in lu]
-                labels.append({"text": "SET_BY_CODE", "vertex_idx": v_idx, "pos": lp, "up": lu})
+                labels.append({"text": str(v_idx + 1), "vertex_idx": v_idx, "pos": lp, "up": lu})
 
         face_meta.append({
             "normal": normal,
@@ -85,10 +85,17 @@ def write_obj(name, vertices, faces):
 phi = (1 + math.sqrt(5)) / 2
 
 def generate_all():
-    # D4
-    s = 30.0
-    v_d4 = [(s,s,s), (s,-s,-s), (-s,s,-s), (-s,-s,s)]
-    f_d4 = [(0,1,2), (0,2,3), (0,3,1), (1,3,2)]
+    # D4 Grounded (Face at y=0)
+    a = 60.0
+    r = a / math.sqrt(3)
+    h = math.sqrt(6) / 3 * a
+    v_d4 = [
+        (0, h * 0.75, 0),
+        (r, -h * 0.25, 0),
+        (r * math.cos(math.radians(120)), -h * 0.25, r * math.sin(math.radians(120))),
+        (r * math.cos(math.radians(240)), -h * 0.25, r * math.sin(math.radians(240)))
+    ]
+    f_d4 = [(1, 2, 3), (0, 2, 1), (0, 3, 2), (0, 1, 3)]
     write_obj("d4", v_d4, f_d4)
 
     # D6
@@ -106,16 +113,29 @@ def generate_all():
     f_d8 = [(0,2,4), (0,4,3), (0,3,5), (0,5,2), (1,4,2), (1,3,4), (1,5,3), (1,2,5)]
     write_obj("d8", v_d8, f_d8)
 
-    # D10
-    s, h = 40.0, 50.0
-    v_d10 = [(0, h, 0), (0, -h, 0)]
+    # D10 (Pentagonal Trapezohedron)
+    h_pole, h_ring, r_ring = 50.0, 12.0, 45.0
+    v_d10 = [(0, h_pole, 0), (0, -h_pole, 0)]
     for i in range(5):
         a = i * 2 * math.pi / 5
-        v_d10.append((s * math.cos(a), 0, s * math.sin(a)))
+        v_d10.append((r_ring * math.cos(a), h_ring, r_ring * math.sin(a))) # Top ring: 2, 4, 6, 8, 10
+        v_d10.append((r_ring * math.cos(a + math.pi/5), -h_ring, r_ring * math.sin(a + math.pi/5))) # Bottom ring: 3, 5, 7, 9, 11
     f_d10 = []
     for i in range(5):
-        f_d10.append((0, 2+i, 2+(i+1)%5))
-        f_d10.append((1, 2+(i+1)%5, 2+i))
+        # Indices for current and next top/bottom ring vertices
+        t_curr = 2 + 2*i
+        b_curr = 2 + 2*i + 1
+        t_next = 2 + (2*i + 2) % 10
+        b_prev = 2 + (2*i - 1) % 10
+        
+        # Top face (Kite): PoleTop, T_curr, B_prev, T_prev? 
+        # Actually: PoleTop, T_curr, B_prev, T_prev is not correct.
+        # Let's use: PoleTop, T_curr, B_curr, T_next
+        # Wait, the stagger means T_i is connected to B_i and B_{i-1}.
+        f_d10.append((0, t_curr, b_curr, t_next))
+        # Bottom face: PoleBottom, B_curr, T_next, B_next
+        b_next = 2 + (2*i + 3) % 10
+        f_d10.append((1, b_curr, t_next, b_next))
     write_obj("d10", v_d10, f_d10)
 
     # D12
@@ -131,27 +151,31 @@ def generate_all():
     for x in [-phi, phi]:
         for z in [-1/phi, 1/phi]: v_d12.append((x*s, 0, z*s))
     f_d12 = [
-        (0, 16, 2, 10, 8), (0, 8, 4, 14, 12), (0, 12, 1, 17, 16),
-        (1, 9, 11, 3, 17), (1, 17, 16, 2, 13), (1, 12, 14, 5, 9),
-        (2, 13, 3, 11, 10), (2, 10, 8, 18, 6), (3, 13, 2, 10, 11),
-        (7, 15, 13, 3, 11), (7, 11, 10, 6, 18), (7, 18, 4, 14, 5)
+        (3, 11, 7, 15, 13), (7, 11, 9, 5, 19), (5, 9, 1, 12, 14),
+        (1, 9, 11, 3, 17), (3, 13, 2, 16, 17), (1, 17, 16, 0, 12),
+        (0, 8, 10, 2, 16), (0, 12, 14, 4, 8), (4, 14, 5, 19, 18),
+        (4, 8, 10, 6, 18), (6, 10, 2, 13, 15), (6, 18, 19, 7, 15)
     ]
     write_obj("d12", v_d12, f_d12)
 
     # D20
-    s = 30.0
+    s = 23.0
     v_d20 = []
-    for y in [-1, 1]:
-        for z in [-phi, phi]: v_d20.append((0, y*s, z*s))
-    for x in [-1, 1]:
-        for y in [-phi, phi]: v_d20.append((x*s, y*s, 0))
+    for z in [-phi, phi]:
+        for x in [-1, 1]: v_d20.append((x*s, 0, z*s))
     for x in [-phi, phi]:
-        for z in [-1, 1]: v_d20.append((x*s, 0, z*s))
+        for y in [-1, 1]: v_d20.append((x*s, y*s, 0))
+    for y in [-phi, phi]:
+        for z in [-1, 1]: v_d20.append((0, y*s, z*s))
+    # Vertices: 
+    # 0:(-1,0,-phi), 1:(1,0,-phi), 2:(-1,0,phi), 3:(1,0,phi)
+    # 4:(-phi,-1,0), 5:(-phi,1,0), 6:(phi,-1,0), 7:(phi,1,0)
+    # 8:(0,-phi,-1), 9:(0,-phi,1), 10:(0,phi,-1), 11:(0,phi,1)
     f_d20 = [
-        (0,8,1), (0,1,4), (0,4,2), (0,2,10), (0,10,8),
-        (1,8,9), (1,9,7), (1,7,4), (4,7,5), (4,5,2),
-        (2,5,3), (2,3,10), (10,3,11), (10,11,8), (8,11,9),
-        (6,11,3), (6,3,5), (6,5,7), (6,7,9), (6,9,11)
+        (0,10,5), (0,5,4), (0,4,8), (0,8,1), (0,1,10),
+        (3,11,7), (3,7,6), (3,6,9), (3,9,2), (3,2,11),
+        (1,10,7), (1,7,6), (1,6,8), (8,6,9), (8,9,4),
+        (4,9,2), (4,2,5), (5,2,11), (5,11,10), (10,11,7)
     ]
     write_obj("d20", v_d20, f_d20)
 
