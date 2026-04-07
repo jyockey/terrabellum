@@ -38,10 +38,11 @@ def write_obj(name, vertices, faces):
 
         # Standard metadata (one label per face)
         labels = []
+        offset = 1.5 if name != "d10" else 2.5
         if name != "d4":
             labels.append({
                 "text": str(f_idx + 1 if name != "d10" else (f_idx + 1) % 10),
-                "pos": [center[i] + normal[i]*0.2 for i in range(3)],
+                "pos": [center[i] + normal[i]*offset for i in range(3)],
                 "up": up
             })
         else:
@@ -50,7 +51,7 @@ def write_obj(name, vertices, faces):
             for v_idx in face:
                 v = vertices[v_idx]
                 # Position is 70% toward the vertex from the face center
-                lp = [center[i] + (v[i] - center[i]) * 0.7 + normal[i]*0.2 for i in range(3)]
+                lp = [center[i] + (v[i] - center[i]) * 0.7 + normal[i]*offset for i in range(3)]
                 # Up for d4 label points toward that vertex
                 lu = [v[i] - center[i] for i in range(3)]
                 lmag = math.sqrt(sum(x*x for x in lu))

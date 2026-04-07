@@ -44,7 +44,12 @@ public partial class DieView : Node3D
         {
             string path = ProjectSettings.GlobalizePath("res://assets/models/dice/metadata.json");
             string json = System.IO.File.ReadAllText(path);
-            _metadata = JsonSerializer.Deserialize<Dictionary<string, List<FaceMetadata>>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var options = new JsonSerializerOptions 
+            { 
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower 
+            };
+            _metadata = JsonSerializer.Deserialize<Dictionary<string, List<FaceMetadata>>>(json, options);
         }
         catch (System.Exception e)
         {
