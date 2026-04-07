@@ -8,6 +8,8 @@ public partial class UnitView : Node3D
 	private Unit _unit;
 	public Color PlayerColor { get; set; } = Colors.White;
 
+	public Unit GetUnit() => _unit;
+
 	private MeshInstance3D _baseMesh = new();
 	private Label3D _label = new();
 

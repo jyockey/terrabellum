@@ -7,13 +7,19 @@ namespace Terrabellum;
 
 public partial class Main : Node
 {
+    public Tabletop Tabletop => _tabletop;
     private Tabletop _tabletop = new();
     private List<UnitView> _unitViews = new();
     private List<DieView> _diceViews = new();
+    private InterfaceView? _interfaceView;
 
     public override void _Ready()
     {
         GD.Print("Terrabellum Initializing (3D)...");
+
+        // Setup UI
+        _interfaceView = new InterfaceView();
+        AddChild(_interfaceView);
 
         // Setup 3D Environment
         SetupEnvironment();
