@@ -20,27 +20,26 @@
 
 - **Rendering:** Simulated overhead 2D view in a full 3D environment with `DirectionalLight3D` and `WorldEnvironment`.
 - **Camera:** `Camera3D` with middle-mouse XZ panning and scroll-wheel Y zooming.
-- **Units:** 3D `CylinderMesh` and `BoxMesh` bases with billboarded labels and facing indicators.
-- **Dice:** Realistic 3D dice with six-sided labels and `Basis`-based absolute orientation for result snapping.
-- **Interface:** `InterfaceView` manages 2D UI, including a mode selector (Move/Measure) with active mode highlighting.
-- **Movement:** Multi-point waypoint tracking with `MovementPath` logic and Cyan path visualization.
-- **Measurement:** Raycasted ground-plane distance measurement reported in game units (e.g., inches).
-- **Configuration:** JSON-based `GameConfig` loader supporting per-game movement styles and measurement scales.
+- **Units:** 3D `CylinderMesh` and `BoxMesh` bases with support for external GLB models via `ModelDefinition` (Path, Scale, Rotation, Offset).
+- **Dice:** Realistic 3D dice with metadata-driven label placement and result-based snapping.
+- **Interface:** `InterfaceView` manages 2D UI and input orchestration (Movement, Measurement, Facing).
+- **Movement:** Multi-point waypoint tracking with collision detection and a post-move interactive facing selection step.
+- **Configuration:** JSON-based system for `GameConfig` and `UnitDefinition` loading, supporting modular asset integration.
+- **Rendering:** High-detail PBR pipeline tuned for millimeter scale (SSAO, SSIL, Filmic Tonemapping, precise Shadow Bias).
 
 ## Project Structure
 
-- `src/Core/`: Pure logic and data structures.
-- `src/Rendering/`: Godot-specific visualization and input handling.
+- `src/Core/`: Pure logic and data structures (e.g., `ModelDefinition`, `UnitDefinition`).
+- `src/Rendering/`: Godot-specific visualization and interaction logic.
+- `config/units/`: JSON definitions for individual unit types.
 - `config/games/`: JSON game rulesets (e.g., `warcrow.json`).
-- `config/schemas/`: JSON schemas for configuration validation.
-- `assets/textures/terrain/`: Terrain background images.
 
 ## Pending Tasks
 
-- [ ] Unit selection visual feedback (e.g., selection rings).
-- [ ] Unit rotation logic (3D Y-axis).
-- [ ] JSON/Text configuration loader for `UnitDefinitions`.
-- [ ] Dice pool management and UI results.
+- [ ] Unit selection visual feedback (e.g., selection rings, highlight shaders).
+- [ ] Dice pool management and UI result tracking.
 - [ ] Hex/Grid movement constraints and snapping.
-- [ ] Terrain texture support for 3D `PlaneMesh`.
-- [ ] Collision detection for unit placement and overlap prevention.
+- [ ] Terrain texture and 3D terrain heightmap support.
+- [ ] Advanced collision detection for unit overlap prevention during deployment.
+- [ ] Serialization for tabletop state (save/load current unit positions and rotations).
+- [ ] Multi-unit selection and group movement.
