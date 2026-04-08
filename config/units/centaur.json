@@ -6,6 +6,7 @@
   "BaseSize": 32.0,
   "ModelPath": "res://assets/models/units/centaur.glb",
   "ModelScale": 32.0,
+  "ModelRotation": 180.0,
   "ModelOffset": {
     "X": 0,
     "Y": 16.0,

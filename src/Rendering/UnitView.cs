@@ -11,6 +11,7 @@ public partial class UnitView : Node3D
 	public Unit GetUnit() => _unit;
 
 	private MeshInstance3D _baseMesh = new();
+	private MeshInstance3D _facingIndicator = new();
 	private Node3D? _modelNode;
 	private Label3D _label = new();
 	private StaticBody3D _body = new();
@@ -30,6 +31,7 @@ public partial class UnitView : Node3D
 		
 		AddChild(_body);
 		_body.AddChild(_baseMesh);
+		_body.AddChild(_facingIndicator);
 		_body.AddChild(_collisionShape);
 		AddChild(_label);
 
@@ -39,6 +41,43 @@ public partial class UnitView : Node3D
 		}
 
 		SetupVisuals();
+		SetupFacingIndicator();
+	}
+
+	private void SetupFacingIndicator()
+	{
+		float size = _unit.Definition.BaseSize;
+		float radius = size / 2.0f;
+		
+		// Shorten shaft to ensure it stays within radius with the arrowhead
+		var headSize = 4.0f; // Slightly smaller head
+		var shaftHeight = radius * 0.6f; // Reduced from 0.8f
+		var shaftWidth = 1.5f;
+		var shaftThickness = 0.5f;
+		
+		var shaft = new BoxMesh { Size = new Vector3(shaftWidth, shaftThickness, shaftHeight) };
+		_facingIndicator.Mesh = shaft;
+		
+		// Position on top of the base
+		_facingIndicator.Position = new Vector3(0, 2.1f, -shaftHeight / 2.0f - radius * 0.1f);
+		
+		// Material: Black for high contrast
+		var material = new StandardMaterial3D { AlbedoColor = Colors.Black, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
+		_facingIndicator.SetSurfaceOverrideMaterial(0, material);
+		
+		// Create the arrowhead
+		var arrowhead = new MeshInstance3D();
+		// A 3-sided cylinder with 0 top radius makes a pyramid/cone (triangle from top)
+		var headMesh = new CylinderMesh { TopRadius = 0, BottomRadius = headSize / 2.0f, Height = headSize, RadialSegments = 3 };
+		arrowhead.Mesh = headMesh;
+		
+		// Rotate it to point along -Z. 
+		arrowhead.RotationDegrees = new Vector3(-90, 0, 0); 
+		// Position it at the end of the shaft
+		arrowhead.Position = new Vector3(0, 0, -shaftHeight / 2.0f - headSize / 2.0f);
+		
+		arrowhead.SetSurfaceOverrideMaterial(0, material);
+		_facingIndicator.AddChild(arrowhead);
 	}
 
 	private void LoadModel(string path)
@@ -56,6 +95,9 @@ public partial class UnitView : Node3D
 				var offset = _unit.Definition.ModelOffset;
 				_modelNode.Position = new Vector3(offset.X, 2.0f + offset.Y, offset.Z); 
 				
+				// Rotate model relative to base facing (Y axis degrees)
+				_modelNode.RotationDegrees = new Vector3(0, _unit.Definition.ModelRotation, 0);
+
 				// Scale GLB (meters) to Game (mm). 
 				float scale = _unit.Definition.ModelScale;
 				_modelNode.Scale = new Vector3(scale, scale, scale);
