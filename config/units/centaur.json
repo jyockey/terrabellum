@@ -4,13 +4,15 @@
   "Type": "Infantry",
   "BaseShape": "Circle",
   "BaseSize": 32.0,
-  "ModelPath": "res://assets/models/units/centaur.glb",
-  "ModelScale": 32.0,
-  "ModelRotation": 180.0,
-  "ModelOffset": {
-    "X": 0,
-    "Y": 16.0,
-    "Z": 0
+  "Model": {
+    "Path": "res://assets/models/units/centaur.glb",
+    "Scale": 32.0,
+    "Rotation": 180.0,
+    "Offset": {
+      "X": 0,
+      "Y": 16.0,
+      "Z": 0
+    }
   },
   "PointCost": 80
 }

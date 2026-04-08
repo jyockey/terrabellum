@@ -22,10 +22,7 @@ public class UnitDefinition
     public int PointCost { get; set; }
     public BaseShape BaseShape { get; set; } = BaseShape.Circle;
     public float BaseSize { get; set; } = 32.0f; 
-    public string ModelPath { get; set; } = string.Empty;
-    public float ModelScale { get; set; } = 1.0f;
-    public float ModelRotation { get; set; } = 0.0f;
-    public System.Numerics.Vector3 ModelOffset { get; set; } = System.Numerics.Vector3.Zero;
+    public ModelDefinition? Model { get; set; }
     public Dictionary<string, float> BaseStats { get; set; } = new();
     public List<string> Tags { get; set; } = new();
 

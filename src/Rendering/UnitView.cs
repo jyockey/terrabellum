@@ -35,9 +35,9 @@ public partial class UnitView : Node3D
 		_body.AddChild(_collisionShape);
 		AddChild(_label);
 
-		if (!string.IsNullOrEmpty(_unit.Definition.ModelPath))
+		if (_unit.Definition.Model != null && !string.IsNullOrEmpty(_unit.Definition.Model.Path))
 		{
-			LoadModel(_unit.Definition.ModelPath);
+			LoadModel(_unit.Definition.Model);
 		}
 
 		SetupVisuals();
@@ -80,11 +80,11 @@ public partial class UnitView : Node3D
 		_facingIndicator.AddChild(arrowhead);
 	}
 
-	private void LoadModel(string path)
+	private void LoadModel(ModelDefinition model)
 	{
 		try
 		{
-			var scene = GD.Load<PackedScene>(path);
+			var scene = GD.Load<PackedScene>(model.Path);
 			if (scene != null)
 			{
 				_modelNode = scene.Instantiate<Node3D>();
@@ -92,14 +92,14 @@ public partial class UnitView : Node3D
 				
 				// Units are typically on top of the 2mm base.
 				// We also apply the user-defined ModelOffset (mm).
-				var offset = _unit.Definition.ModelOffset;
+				var offset = model.Offset;
 				_modelNode.Position = new Vector3(offset.X, 2.0f + offset.Y, offset.Z); 
 				
 				// Rotate model relative to base facing (Y axis degrees)
-				_modelNode.RotationDegrees = new Vector3(0, _unit.Definition.ModelRotation, 0);
+				_modelNode.RotationDegrees = new Vector3(0, model.Rotation, 0);
 
 				// Scale GLB (meters) to Game (mm). 
-				float scale = _unit.Definition.ModelScale;
+				float scale = model.Scale;
 				_modelNode.Scale = new Vector3(scale, scale, scale);
 
 				ApplyModelMaterial(_modelNode);
@@ -107,7 +107,7 @@ public partial class UnitView : Node3D
 		}
 		catch (System.Exception e)
 		{
-			GD.PrintErr($"Failed to load model at {path}: {e.Message}");
+			GD.PrintErr($"Failed to load model at {model.Path}: {e.Message}");
 		}
 	}
 
