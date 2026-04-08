@@ -11,6 +11,7 @@ public partial class UnitView : Node3D
 	public Unit GetUnit() => _unit;
 
 	private MeshInstance3D _baseMesh = new();
+	private Node3D? _modelNode;
 	private Label3D _label = new();
 	private StaticBody3D _body = new();
 	private CollisionShape3D _collisionShape = new();
@@ -31,7 +32,71 @@ public partial class UnitView : Node3D
 		_body.AddChild(_baseMesh);
 		_body.AddChild(_collisionShape);
 		AddChild(_label);
+
+		if (!string.IsNullOrEmpty(_unit.Definition.ModelPath))
+		{
+			LoadModel(_unit.Definition.ModelPath);
+		}
+
 		SetupVisuals();
+	}
+
+	private void LoadModel(string path)
+	{
+		try
+		{
+			var scene = GD.Load<PackedScene>(path);
+			if (scene != null)
+			{
+				_modelNode = scene.Instantiate<Node3D>();
+				_body.AddChild(_modelNode);
+				
+				// Units are typically on top of the 2mm base.
+				// We also apply the user-defined ModelOffset (mm).
+				var offset = _unit.Definition.ModelOffset;
+				_modelNode.Position = new Vector3(offset.X, 2.0f + offset.Y, offset.Z); 
+				
+				// Scale GLB (meters) to Game (mm). 
+				float scale = _unit.Definition.ModelScale;
+				_modelNode.Scale = new Vector3(scale, scale, scale);
+
+				ApplyModelMaterial(_modelNode);
+			}
+		}
+		catch (System.Exception e)
+		{
+			GD.PrintErr($"Failed to load model at {path}: {e.Message}");
+		}
+	}
+
+	private void ApplyModelMaterial(Node node)
+	{
+		var material = new StandardMaterial3D 
+		{ 
+			AlbedoColor = new Color(0.6f, 0.6f, 0.6f), // Slightly darker for better shadow depth
+			Roughness = 0.4f, // Increased for a more "matte/plastic" look which shows details better
+			RimEnabled = true,
+			Rim = 0.2f, // Subtle rim to catch edges
+			DiffuseMode = StandardMaterial3D.DiffuseModeEnum.Burley, // Default modern PBR, better for organic shapes
+			SpecularMode = StandardMaterial3D.SpecularModeEnum.SchlickGgx,
+			VertexColorUseAsAlbedo = false // Explicitly disable vertex colors to prevent washing out
+		};
+
+		foreach (var child in node.GetChildren())
+		{
+			if (child is MeshInstance3D mesh)
+			{
+				mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
+				for (int i = 0; i < mesh.Mesh.GetSurfaceCount(); i++)
+				{
+					mesh.SetSurfaceOverrideMaterial(i, material);
+				}
+			}
+			else if (child is Node childNode)
+			{
+				ApplyModelMaterial(childNode);
+			}
+		}
 	}
 
 	private void SetupVisuals()
@@ -40,6 +105,8 @@ public partial class UnitView : Node3D
 		float radius = size / 2.0f;
 
 		var material = new StandardMaterial3D { AlbedoColor = PlayerColor };
+		material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
+		material.AlbedoColor = new Color(PlayerColor.R, PlayerColor.G, PlayerColor.B, 0.5f); // Semi-transparent base
 
 		Shape3D godotShape;
 

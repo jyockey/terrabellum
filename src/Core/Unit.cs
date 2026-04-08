@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Terrabellum.Core;
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum BaseShape
 {
     Circle,
@@ -18,8 +22,29 @@ public class UnitDefinition
     public int PointCost { get; set; }
     public BaseShape BaseShape { get; set; } = BaseShape.Circle;
     public float BaseSize { get; set; } = 32.0f; 
+    public string ModelPath { get; set; } = string.Empty;
+    public float ModelScale { get; set; } = 1.0f;
+    public System.Numerics.Vector3 ModelOffset { get; set; } = System.Numerics.Vector3.Zero;
     public Dictionary<string, float> BaseStats { get; set; } = new();
     public List<string> Tags { get; set; } = new();
+
+    public static UnitDefinition? LoadFromFile(string path)
+    {
+        try
+        {
+            string json = File.ReadAllText(path);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            return JsonSerializer.Deserialize<UnitDefinition>(json, options);
+        }
+        catch (Exception e)
+        {
+            Godot.GD.PrintErr($"Failed to load UnitDefinition from {path}: {e.Message}");
+            return null;
+        }
+    }
 }
 
 public class Unit

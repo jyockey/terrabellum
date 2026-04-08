@@ -46,41 +46,20 @@ public partial class Main : Node
 
         SetupDice();
 
-        // 1. Create dummy definitions
-        var orcDefinition = new UnitDefinition
-        {
-            Id = "orc_blitzer",
-            Name = "Orc Blitzer",
-            Type = "Infantry",
-            BaseShape = BaseShape.Circle,
-            BaseSize = 32.0f,
-            PointCost = 80
-        };
+        // 2. Spawn units from config
+        var orcDefinition = LoadUnit("centaur");
+        var marineDefinition = LoadUnit("space_marine");
+        var tankDefinition = LoadUnit("rhino_tank");
 
-        var marineDefinition = new UnitDefinition
-        {
-            Id = "space_marine",
-            Name = "Space Marine",
-            Type = "Infantry",
-            BaseShape = BaseShape.Circle,
-            BaseSize = 28.0f,
-            PointCost = 20
-        };
+        if (orcDefinition != null) SpawnUnit(orcDefinition, new System.Numerics.Vector2(-100, -100), Colors.Green);
+        if (marineDefinition != null) SpawnUnit(marineDefinition, new System.Numerics.Vector2(100, -100), Colors.Blue);
+        if (tankDefinition != null) SpawnUnit(tankDefinition, new System.Numerics.Vector2(0, 100), Colors.Blue);
+    }
 
-        var tankDefinition = new UnitDefinition
-        {
-            Id = "rhino_tank",
-            Name = "Rhino",
-            Type = "Vehicle",
-            BaseShape = BaseShape.Square,
-            BaseSize = 60.0f,
-            PointCost = 100
-        };
-
-        // 2. Spawn units
-        SpawnUnit(orcDefinition, new System.Numerics.Vector2(-100, -100), Colors.Green);
-        SpawnUnit(marineDefinition, new System.Numerics.Vector2(100, -100), Colors.Blue);
-        SpawnUnit(tankDefinition, new System.Numerics.Vector2(0, 100), Colors.Blue);
+    private UnitDefinition? LoadUnit(string name)
+    {
+        string path = ProjectSettings.GlobalizePath($"res://config/units/{name}.json");
+        return UnitDefinition.LoadFromFile(path);
     }
 
     private void SetupEnvironment()
@@ -89,8 +68,10 @@ public partial class Main : Node
         var light = new DirectionalLight3D();
         light.RotationDegrees = new Vector3(-45, 45, 0);
         light.ShadowEnabled = true;
-        light.LightEnergy = 0.8f;
-        light.ShadowBias = 0.05f;
+        light.LightEnergy = 1.2f; // Increased for better contrast
+        light.ShadowBias = 0.002f; // Much smaller for mm scale (2 microns)
+        light.ShadowNormalBias = 0.01f; 
+        light.ShadowBlur = 0.5f;
         AddChild(light);
 
         // World Environment
@@ -102,7 +83,16 @@ public partial class Main : Node
         environment.BackgroundMode = Godot.Environment.BGMode.Sky;
         environment.Sky = sky;
         environment.AmbientLightSource = Godot.Environment.AmbientSource.Sky;
-        environment.AmbientLightEnergy = 0.2f;
+        environment.AmbientLightEnergy = 0.1f; // Lower ambient for deeper shadows
+        
+        // Enable High-Detail features
+        environment.SsaoEnabled = true;
+        environment.SsaoIntensity = 2.0f;
+        environment.SsaoRadius = 5.0f; // 5mm radius for AO
+        
+        environment.SsilEnabled = true;
+        
+        environment.TonemapMode = Godot.Environment.ToneMapper.Filmic;
         
         env.Environment = environment;
         AddChild(env);

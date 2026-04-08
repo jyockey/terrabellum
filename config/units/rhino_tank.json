@@ -1,0 +1,15 @@
+{
+  "Id": "rhino_tank",
+  "Name": "Rhino",
+  "Type": "Vehicle",
+  "BaseShape": "Square",
+  "BaseSize": 60.0,
+  "ModelPath": "",
+  "ModelScale": 1.0,
+  "ModelOffset": {
+    "X": 0,
+    "Y": 0,
+    "Z": 0
+  },
+  "PointCost": 100
+}

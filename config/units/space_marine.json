@@ -1,0 +1,15 @@
+{
+  "Id": "space_marine",
+  "Name": "Space Marine",
+  "Type": "Infantry",
+  "BaseShape": "Circle",
+  "BaseSize": 28.0,
+  "ModelPath": "",
+  "ModelScale": 1.0,
+  "ModelOffset": {
+    "X": 0,
+    "Y": 0,
+    "Z": 0
+  },
+  "PointCost": 20
+}

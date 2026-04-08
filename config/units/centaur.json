@@ -1,0 +1,15 @@
+{
+  "Id": "orc_blitzer",
+  "Name": "Orc Blitzer",
+  "Type": "Infantry",
+  "BaseShape": "Circle",
+  "BaseSize": 32.0,
+  "ModelPath": "res://assets/models/units/centaur.glb",
+  "ModelScale": 32.0,
+  "ModelOffset": {
+    "X": 0,
+    "Y": 16.0,
+    "Z": 0
+  },
+  "PointCost": 80
+}
