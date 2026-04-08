@@ -18,6 +18,7 @@ public partial class InterfaceView : CanvasLayer
 
     // Movement state
     private MovementPath? _activeMovement;
+    private bool _isSelectingFacing = false;
     private Line2D _pathLine = new();
     private Label _pathLabel = new();
 
@@ -107,6 +108,14 @@ public partial class InterfaceView : CanvasLayer
 
         if (@event is InputEventMouseButton mouseBtn && mouseBtn.ButtonIndex == MouseButton.Left && mouseBtn.Pressed)
         {
+            if (_isSelectingFacing)
+            {
+                // Finalize rotation and movement
+                _activeMovement?.Finalize(_activeMovement.Unit.Position);
+                CancelMovement();
+                return;
+            }
+
             Vector3 groundPos = GetGroundPos(camera, mouseBtn.Position);
             System.Numerics.Vector2 logicalPos = new(groundPos.X, groundPos.Z);
 
@@ -122,9 +131,7 @@ public partial class InterfaceView : CanvasLayer
             {
                 if (mouseBtn.DoubleClick)
                 {
-                    // Use actual unit position for finality to ensure no collision at end
-                    _activeMovement.Finalize(_activeMovement.Unit.Position);
-                    CancelMovement();
+                    _isSelectingFacing = true;
                 }
                 else
                 {
@@ -142,9 +149,22 @@ public partial class InterfaceView : CanvasLayer
             Vector3 groundPos = GetGroundPos(camera, mouseMotion.Position);
             System.Numerics.Vector2 logicalPos = new(groundPos.X, groundPos.Z);
             
-            if (!IsCollisionAt(_activeMovement.Unit, logicalPos))
+            if (_isSelectingFacing)
             {
-                _activeMovement.Unit.Position = logicalPos;
+                // Rotate towards mouse
+                var diff = logicalPos - _activeMovement.Unit.Position;
+                if (diff.Length() > 0.1f)
+                {
+                    // Use Atan2(x, -y) to make 0 = North (-Z) and CW = positive
+                    _activeMovement.Unit.Rotation = Mathf.Atan2(diff.X, -diff.Y);
+                }
+            }
+            else
+            {
+                if (!IsCollisionAt(_activeMovement.Unit, logicalPos))
+                {
+                    _activeMovement.Unit.Position = logicalPos;
+                }
             }
             UpdatePathVisuals(camera, _activeMovement.Unit.Position);
         }
@@ -190,7 +210,9 @@ public partial class InterfaceView : CanvasLayer
         _pathLine.Points = screenPoints.ToArray();
         
         float distance = _activeMovement.GetTotalDistance(terminalPos) / _config.UnitsPerMeasurement;
-        _pathLabel.Text = $"{distance:F1}{_config.UnitSuffix}";
+        string text = $"{distance:F1}{_config.UnitSuffix}";
+        if (_isSelectingFacing) text += " (Set Facing)";
+        _pathLabel.Text = text;
         _pathLabel.Position = screenPoints[screenPoints.Count - 1] + new Vector2(15, 15);
         _pathLabel.Show();
     }
@@ -198,6 +220,7 @@ public partial class InterfaceView : CanvasLayer
     private void CancelMovement()
     {
         _activeMovement = null;
+        _isSelectingFacing = false;
         _pathLine.ClearPoints();
         _pathLabel.Hide();
     }
