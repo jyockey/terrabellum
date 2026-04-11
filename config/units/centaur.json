@@ -7,7 +7,7 @@
   "Model": {
     "Path": "res://assets/models/units/centaur.glb",
     "Scale": 32.0,
-    "Rotation": 180.0,
+    "Rotation": 190.0,
     "Offset": {
       "X": 0,
       "Y": 16.0,

@@ -101,14 +101,24 @@ public partial class UnitView : Node3D
 
 	private void ApplyModelMaterial(Node node)
 	{
-		var material = new StandardMaterial3D { AlbedoColor = new Color(0.5f, 0.5f, 0.5f), Roughness = 0.7f, VertexColorUseAsAlbedo = false };
+		// Create a subtle "color wash" by starting with a light grey base and adding 15% of the player color
+		var washColor = new Color(0.7f, 0.7f, 0.7f).Lerp(PlayerColor, 0.15f);
+		var material = new StandardMaterial3D 
+		{ 
+			AlbedoColor = washColor,
+			Roughness = 0.8f, 
+			VertexColorUseAsAlbedo = false 
+		};
+
 		foreach (var child in node.GetChildren())
 		{
 			if (child is MeshInstance3D mesh)
 			{
 				mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
 				for (int i = 0; i < mesh.Mesh.GetSurfaceCount(); i++)
+				{
 					mesh.SetSurfaceOverrideMaterial(i, material);
+				}
 			}
 			else if (child is Node childNode)
 				ApplyModelMaterial(childNode);

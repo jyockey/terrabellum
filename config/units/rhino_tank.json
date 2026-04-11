@@ -5,9 +5,9 @@
   "BaseShape": "Square",
   "BaseSize": 60.0,
   "Model": {
-    "Path": "",
-    "Scale": 1.0,
-    "Rotation": 0.0,
+    "Path": "res://assets/models/units/rhino.glb",
+    "Scale": 60.0,
+    "Rotation": -90.0,
     "Offset": {
       "X": 0,
       "Y": 0,

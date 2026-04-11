@@ -50,11 +50,13 @@ public partial class Main : Node
         var orcDefinition = LoadUnit("centaur");
         var marineDefinition = LoadUnit("space_marine");
         var tankDefinition = LoadUnit("rhino_tank");
+        var duckDefinition = LoadUnit("duck");
 
         // Spawn positions use logical coordinates (millimeters)
         if (orcDefinition != null) SpawnUnit(orcDefinition, new System.Numerics.Vector2(-100f, -100f), Colors.Green);
         if (marineDefinition != null) SpawnUnit(marineDefinition, new System.Numerics.Vector2(100f, -100f), Colors.Blue);
         if (tankDefinition != null) SpawnUnit(tankDefinition, new System.Numerics.Vector2(0, 100f), Colors.Blue);
+        if (duckDefinition != null) SpawnUnit(duckDefinition, new System.Numerics.Vector2(0, -100f), Colors.Yellow);
     }
 
     private UnitDefinition? LoadUnit(string name)
