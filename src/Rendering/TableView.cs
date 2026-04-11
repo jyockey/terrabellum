@@ -12,11 +12,12 @@ public partial class TableView : Node3D
         AddChild(_terrainMesh);
         
         var plane = new PlaneMesh();
-        plane.Size = new Vector2(2048, 2048);
+        plane.Size = new Vector2(2.0f, 2.0f); // 2 meters
         _terrainMesh.Mesh = plane;
 
         var material = new StandardMaterial3D();
         material.AlbedoTexture = GD.Load<Texture2D>("res://assets/textures/terrain/default.jpg") ?? CreatePlaceholder();
+        material.Uv1Scale = new Vector3(4, 4, 1); // Tile texture
         _terrainMesh.SetSurfaceOverrideMaterial(0, material);
     }
 

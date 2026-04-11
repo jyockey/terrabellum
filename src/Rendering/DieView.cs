@@ -69,11 +69,16 @@ public partial class DieView : Node3D
         if (customMesh != null)
         {
             _mesh.Mesh = customMesh;
+            // Mesh is normalized such that d6 width is 1.0. 
+            // We scale it to the physical world width (meters).
+            float worldScale = RenderScale.ToWorld(RenderScale.DiceSize);
+            _mesh.Scale = new Vector3(worldScale, worldScale, worldScale);
         }
         else
         {
-            _mesh.Mesh = new BoxMesh { Size = new Vector3(40, 40, 40) };
-            _mesh.Position = new Vector3(0, 20, 0);
+            float worldSize = RenderScale.ToWorld(RenderScale.DiceSize);
+            _mesh.Mesh = new BoxMesh { Size = new Vector3(worldSize, worldSize, worldSize) };
+            _mesh.Position = new Vector3(0, worldSize / 2.0f, 0);
         }
 
         var material = new StandardMaterial3D 
@@ -81,8 +86,6 @@ public partial class DieView : Node3D
             VertexColorUseAsAlbedo = true,
             AlbedoColor = new Color(0.7f, 0.7f, 0.7f),
             Roughness = 0.2f,
-            RimEnabled = true,
-            Rim = 0.5f,
             DiffuseMode = StandardMaterial3D.DiffuseModeEnum.Lambert,
             SpecularMode = StandardMaterial3D.SpecularModeEnum.SchlickGgx
         };
@@ -110,19 +113,13 @@ public partial class DieView : Node3D
                 string text = labelMeta.Text;
                 if (labelMeta.VertexIdx.HasValue)
                 {
-                    // For d4, result is based on vertex index
                     if (labelMeta.VertexIdx.Value < _die.Faces.Length)
-                    {
                         text = _die.Faces[labelMeta.VertexIdx.Value];
-                    }
                 }
                 else
                 {
-                    // For others, result is based on face index
                     if (i < _die.Faces.Length)
-                    {
                         text = _die.Faces[i];
-                    }
                 }
                 
                 AddFaceLabel(text, pos, normal, up);
@@ -134,13 +131,22 @@ public partial class DieView : Node3D
     {
         var label = new Label3D();
         label.Text = text;
-        label.FontSize = 128;
-        label.PixelSize = 0.15f; 
+        label.FontSize = RenderScale.StandardFontSize;
+        
+        // Since label is a child of _mesh, its PixelSize must be relative to the mesh scale.
+        // Final world height = PixelSize * FontSize * MeshWorldScale
+        // PixelSize = logicalLabelHeight / (FontSize * logicalMeshWidth)
+        label.PixelSize = RenderScale.GetLocalPixelSize(RenderScale.DiceLabelHeight, RenderScale.DiceSize);
+        
         label.Modulate = Colors.Black;
         label.OutlineModulate = Colors.White;
+        label.OutlineSize = RenderScale.StandardOutlineSize;
+        label.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         
+        // Face the camera correctly
         label.Basis = Basis.LookingAt(normal, upVector, true);
-        label.Position = position;
+        // Offset slightly along normal to prevent z-fighting (0.02 in mesh-local units where 1.0 is d6 width)
+        label.Position = position + normal * 0.02f;
 
         _mesh.AddChild(label);
     }
@@ -180,30 +186,24 @@ public partial class DieView : Node3D
         var faces = _metadata[modelName];
         if (_die.LastResultIndex >= faces.Count) return;
 
-        // For all dice except D4, the 'result' is the face pointing UP.
-        // For D4, our generator associates face index with result vertex index.
-        // Pointing the face normal UP makes the die land on that face (if it's the bottom face).
-        // My D4 generator: face 0 is the bottom face (Normal points DOWN). 
-        // If result is 1 (index 0), we want face 0 normal pointing DOWN.
-        
         var face = faces[_die.LastResultIndex];
         var targetNormal = new Vector3(face.Normal[0], face.Normal[1], face.Normal[2]);
-        
         Vector3 worldTarget = (modelName == "d4") ? Vector3.Down : Vector3.Up;
 
+        Basis targetRotation;
         if (targetNormal.IsEqualApprox(worldTarget))
-        {
-            _mesh.Basis = Basis.Identity;
-        }
+            targetRotation = Basis.Identity;
         else if (targetNormal.IsEqualApprox(-worldTarget))
-        {
-            _mesh.Basis = new Basis(Vector3.Right, Mathf.Pi);
-        }
+            targetRotation = new Basis(Vector3.Right, Mathf.Pi);
         else
         {
             Vector3 axis = targetNormal.Cross(worldTarget).Normalized();
             float angle = Mathf.Acos(targetNormal.Dot(worldTarget));
-            _mesh.Basis = new Basis(axis, angle);
+            targetRotation = new Basis(axis, angle);
         }
+
+        // Apply rotation while maintaining our physical meters scale
+        float worldScale = RenderScale.ToWorld(RenderScale.DiceSize);
+        _mesh.Basis = targetRotation.Scaled(new Vector3(worldScale, worldScale, worldScale));
     }
 }

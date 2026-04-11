@@ -117,7 +117,7 @@ public partial class InterfaceView : CanvasLayer
             }
 
             Vector3 groundPos = GetGroundPos(camera, mouseBtn.Position);
-            System.Numerics.Vector2 logicalPos = new(groundPos.X, groundPos.Z);
+            System.Numerics.Vector2 logicalPos = RenderScale.ToLogicalPos(groundPos);
 
             if (_activeMovement == null)
             {
@@ -147,13 +147,13 @@ public partial class InterfaceView : CanvasLayer
         if (@event is InputEventMouseMotion mouseMotion && _activeMovement != null)
         {
             Vector3 groundPos = GetGroundPos(camera, mouseMotion.Position);
-            System.Numerics.Vector2 logicalPos = new(groundPos.X, groundPos.Z);
+            System.Numerics.Vector2 logicalPos = RenderScale.ToLogicalPos(groundPos);
             
             if (_isSelectingFacing)
             {
                 // Rotate towards mouse
                 var diff = logicalPos - _activeMovement.Unit.Position;
-                if (diff.Length() > 0.1f)
+                if (diff.Length() > 1.0f) // 1mm
                 {
                     // Use Atan2(x, -y) to make 0 = North (-Z) and CW = positive
                     _activeMovement.Unit.Rotation = Mathf.Atan2(diff.X, -diff.Y);
@@ -185,9 +185,10 @@ public partial class InterfaceView : CanvasLayer
 
         var query = new PhysicsShapeQueryParameters3D();
         query.Shape = shape.Shape;
-        // Logical (X, Y) -> World (X, 0, Z)
-        // Ensure we check at the correct height (1.0f as set in UnitView)
-        query.Transform = new Transform3D(Basis.Identity, new Vector3(pos.X, 1.0f, pos.Y));
+        
+        // Ensure we check at the correct logical height for base (e.g. 1mm up)
+        query.Transform = new Transform3D(Basis.Identity, RenderScale.ToWorldPos(pos, RenderScale.ToWorld(1.0f)));
+        
         // Exclude the moving unit's own body
         var body = movingView.GetNodeOrNull<StaticBody3D>("StaticBody3D");
         if (body != null) query.Exclude = new Godot.Collections.Array<Rid> { body.GetRid() };
@@ -203,12 +204,14 @@ public partial class InterfaceView : CanvasLayer
         var screenPoints = new List<Vector2>();
         foreach (var wp in _activeMovement.Waypoints)
         {
-            screenPoints.Add(camera.UnprojectPosition(new Vector3(wp.X, 0, wp.Y)));
+            screenPoints.Add(camera.UnprojectPosition(RenderScale.ToWorldPos(wp)));
         }
-        screenPoints.Add(camera.UnprojectPosition(new Vector3(terminalPos.X, 0, terminalPos.Y)));
+        screenPoints.Add(camera.UnprojectPosition(RenderScale.ToWorldPos(terminalPos)));
+
 
         _pathLine.Points = screenPoints.ToArray();
         
+        // Logical units are still mm, so convert to measurement (e.g. inches)
         float distance = _activeMovement.GetTotalDistance(terminalPos) / _config.UnitsPerMeasurement;
         string text = $"{distance:F1}{_config.UnitSuffix}";
         if (_isSelectingFacing) text += " (Set Facing)";
@@ -278,7 +281,8 @@ public partial class InterfaceView : CanvasLayer
             {
                 Vector3 startWorld = GetGroundPos(camera, _measureStartPos);
                 Vector3 endWorld = GetGroundPos(camera, mouseMotion.Position);
-                float dist = (endWorld - startWorld).Length() / _config.UnitsPerMeasurement;
+                // Convert world distance back to logical distance before dividing by config units
+                float dist = RenderScale.ToLogical((endWorld - startWorld).Length()) / _config.UnitsPerMeasurement;
                 _measureLabel.Text = $"{dist:F1}{_config.UnitSuffix}";
             }
             else

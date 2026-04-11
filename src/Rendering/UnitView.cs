@@ -20,7 +20,7 @@ public partial class UnitView : Node3D
 	public UnitView(Unit unit)
 	{
 		_unit = unit;
-		Position = new Vector3(_unit.Position.X, 0, _unit.Position.Y);
+		Position = RenderScale.ToWorldPos(_unit.Position);
 		Rotation = new Vector3(0, -_unit.Rotation, 0);
 	}
 
@@ -46,36 +46,28 @@ public partial class UnitView : Node3D
 
 	private void SetupFacingIndicator()
 	{
-		float size = _unit.Definition.BaseSize;
-		float radius = size / 2.0f;
+		float worldRadius = RenderScale.ToWorld(_unit.Definition.BaseSize / 2.0f);
 		
-		// Shorten shaft to ensure it stays within radius with the arrowhead
-		var headSize = 4.0f; // Slightly smaller head
-		var shaftHeight = radius * 0.6f; // Reduced from 0.8f
-		var shaftWidth = 1.5f;
-		var shaftThickness = 0.5f;
+		var headSize = RenderScale.ToWorld(RenderScale.IndicatorSize);
+		var shaftHeight = worldRadius * 0.6f; 
+		var shaftWidth = headSize * 0.4f; // Derived from head size
+		var shaftThickness = RenderScale.ToWorld(RenderScale.BaseHeight / 4.0f);
 		
 		var shaft = new BoxMesh { Size = new Vector3(shaftWidth, shaftThickness, shaftHeight) };
 		_facingIndicator.Mesh = shaft;
 		
-		// Position on top of the base
-		_facingIndicator.Position = new Vector3(0, 2.1f, -shaftHeight / 2.0f - radius * 0.1f);
+		// Position slightly above the base height
+		float yOffset = RenderScale.WorldBaseHeight + RenderScale.ToWorld(RenderScale.BaseHeight / 10.0f);
+		_facingIndicator.Position = new Vector3(0, yOffset, -shaftHeight / 2.0f - worldRadius * 0.1f);
 		
-		// Material: Black for high contrast
 		var material = new StandardMaterial3D { AlbedoColor = Colors.Black, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
 		_facingIndicator.SetSurfaceOverrideMaterial(0, material);
 		
-		// Create the arrowhead
 		var arrowhead = new MeshInstance3D();
-		// A 3-sided cylinder with 0 top radius makes a pyramid/cone (triangle from top)
 		var headMesh = new CylinderMesh { TopRadius = 0, BottomRadius = headSize / 2.0f, Height = headSize, RadialSegments = 3 };
 		arrowhead.Mesh = headMesh;
-		
-		// Rotate it to point along -Z. 
 		arrowhead.RotationDegrees = new Vector3(-90, 0, 0); 
-		// Position it at the end of the shaft
 		arrowhead.Position = new Vector3(0, 0, -shaftHeight / 2.0f - headSize / 2.0f);
-		
 		arrowhead.SetSurfaceOverrideMaterial(0, material);
 		_facingIndicator.AddChild(arrowhead);
 	}
@@ -90,17 +82,13 @@ public partial class UnitView : Node3D
 				_modelNode = scene.Instantiate<Node3D>();
 				_body.AddChild(_modelNode);
 				
-				// Units are typically on top of the 2mm base.
-				// We also apply the user-defined ModelOffset (mm).
+				// Apply base height + logical offsets
 				var offset = model.Offset;
-				_modelNode.Position = new Vector3(offset.X, 2.0f + offset.Y, offset.Z); 
-				
-				// Rotate model relative to base facing (Y axis degrees)
+				_modelNode.Position = RenderScale.ToWorldPos(new System.Numerics.Vector2(offset.X, offset.Z), RenderScale.WorldBaseHeight + RenderScale.ToWorld(offset.Y)); 
 				_modelNode.RotationDegrees = new Vector3(0, model.Rotation, 0);
 
-				// Scale GLB (meters) to Game (mm). 
-				float scale = model.Scale;
-				_modelNode.Scale = new Vector3(scale, scale, scale);
+				// Imported models match the world scale multiplied by definition scale
+				_modelNode.Scale = RenderScale.ModelScale * model.Scale;
 
 				ApplyModelMaterial(_modelNode);
 			}
@@ -113,85 +101,71 @@ public partial class UnitView : Node3D
 
 	private void ApplyModelMaterial(Node node)
 	{
-		var material = new StandardMaterial3D 
-		{ 
-			AlbedoColor = new Color(0.6f, 0.6f, 0.6f), // Slightly darker for better shadow depth
-			Roughness = 0.4f, // Increased for a more "matte/plastic" look which shows details better
-			RimEnabled = true,
-			Rim = 0.2f, // Subtle rim to catch edges
-			DiffuseMode = StandardMaterial3D.DiffuseModeEnum.Burley, // Default modern PBR, better for organic shapes
-			SpecularMode = StandardMaterial3D.SpecularModeEnum.SchlickGgx,
-			VertexColorUseAsAlbedo = false // Explicitly disable vertex colors to prevent washing out
-		};
-
+		var material = new StandardMaterial3D { AlbedoColor = new Color(0.5f, 0.5f, 0.5f), Roughness = 0.7f, VertexColorUseAsAlbedo = false };
 		foreach (var child in node.GetChildren())
 		{
 			if (child is MeshInstance3D mesh)
 			{
 				mesh.CastShadow = GeometryInstance3D.ShadowCastingSetting.On;
 				for (int i = 0; i < mesh.Mesh.GetSurfaceCount(); i++)
-				{
 					mesh.SetSurfaceOverrideMaterial(i, material);
-				}
 			}
 			else if (child is Node childNode)
-			{
 				ApplyModelMaterial(childNode);
-			}
 		}
 	}
 
 	private void SetupVisuals()
 	{
-		float size = _unit.Definition.BaseSize;
-		float radius = size / 2.0f;
+		float worldSize = RenderScale.ToWorld(_unit.Definition.BaseSize);
+		float worldRadius = worldSize / 2.0f;
+		float baseHeight = RenderScale.WorldBaseHeight;
 
-		var material = new StandardMaterial3D { AlbedoColor = PlayerColor };
-		material.Transparency = BaseMaterial3D.TransparencyEnum.Alpha;
-		material.AlbedoColor = new Color(PlayerColor.R, PlayerColor.G, PlayerColor.B, 0.5f); // Semi-transparent base
+		var material = new StandardMaterial3D { AlbedoColor = PlayerColor, Transparency = BaseMaterial3D.TransparencyEnum.Alpha };
+		material.AlbedoColor = new Color(PlayerColor.R, PlayerColor.G, PlayerColor.B, 0.6f);
 
 		Shape3D godotShape;
-
 		switch (_unit.Definition.BaseShape)
 		{
 			case BaseShape.Circle:
-				var cylinder = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f };
+				var cylinder = new CylinderMesh { TopRadius = worldRadius, BottomRadius = worldRadius, Height = baseHeight };
 				_baseMesh.Mesh = cylinder;
-				_baseMesh.Position = new Vector3(0, 1.0f, 0);
-				godotShape = new CylinderShape3D { Radius = radius, Height = 2.0f };
+				godotShape = new CylinderShape3D { Radius = worldRadius, Height = baseHeight };
 				break;
 			case BaseShape.Square:
-				var box = new BoxMesh { Size = new Vector3(size, 2.0f, size) };
+				var box = new BoxMesh { Size = new Vector3(worldSize, baseHeight, worldSize) };
 				_baseMesh.Mesh = box;
-				_baseMesh.Position = new Vector3(0, 1.0f, 0);
-				godotShape = new BoxShape3D { Size = new Vector3(size, 2.0f, size) };
+				godotShape = new BoxShape3D { Size = new Vector3(worldSize, baseHeight, worldSize) };
 				break;
 			case BaseShape.Hex:
-				var hex = new CylinderMesh { TopRadius = radius, BottomRadius = radius, Height = 2.0f, RadialSegments = 6 };
+				var hex = new CylinderMesh { TopRadius = worldRadius, BottomRadius = worldRadius, Height = baseHeight, RadialSegments = 6 };
 				_baseMesh.Mesh = hex;
-				_baseMesh.Position = new Vector3(0, 1.0f, 0);
-				// We'll use a cylinder for hex collision as it's a close approximation
-				godotShape = new CylinderShape3D { Radius = radius, Height = 2.0f };
+				godotShape = new CylinderShape3D { Radius = worldRadius, Height = baseHeight };
 				break;
 			default:
-				godotShape = new SphereShape3D { Radius = radius };
+				godotShape = new SphereShape3D { Radius = worldRadius };
 				break;
 		}
 
+		_baseMesh.Position = new Vector3(0, baseHeight / 2.0f, 0);
 		_baseMesh.SetSurfaceOverrideMaterial(0, material);
 		_collisionShape.Shape = godotShape;
-		_collisionShape.Position = new Vector3(0, 1.0f, 0);
+		_collisionShape.Position = new Vector3(0, baseHeight / 2.0f, 0);
 
 		_label.Text = _unit.CustomName;
-		_label.FontSize = 64;
-		_label.PixelSize = 0.15f;
+		_label.FontSize = RenderScale.StandardFontSize;
+		_label.PixelSize = RenderScale.GetPixelSize(RenderScale.UnitLabelHeight);
+		_label.OutlineSize = RenderScale.StandardOutlineSize;
 		_label.Billboard = BaseMaterial3D.BillboardModeEnum.Enabled;
-		_label.Position = new Vector3(0, 10.0f + radius, 0);
+		_label.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+		// Position at standard unit height + standard label offset
+		float labelY = RenderScale.ToWorld(RenderScale.StandardUnitHeight + RenderScale.LabelOffset);
+		_label.Position = new Vector3(0, labelY, 0);
 	}
 
 	public override void _Process(double delta)
 	{
-		Position = new Vector3(_unit.Position.X, 0, _unit.Position.Y);
+		Position = RenderScale.ToWorldPos(_unit.Position);
 		Rotation = new Vector3(0, -_unit.Rotation, 0);
 	}
 }
