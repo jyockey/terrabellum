@@ -99,7 +99,6 @@ public partial class InterfaceView : CanvasLayer
     private void HandleRollCommand(string expression)
     {
         // Handle expressions like "2d6", "3 Attack", or just "Attack"
-        // Regex looks for leading digits (optional), then optional space, then the rest of the string
         var match = System.Text.RegularExpressions.Regex.Match(expression.Trim(), @"^(\d+)?\s*(.*)$");
         if (!match.Success) return;
 
@@ -107,7 +106,6 @@ public partial class InterfaceView : CanvasLayer
         int count = string.IsNullOrEmpty(countStr) ? 1 : int.Parse(countStr);
         string diceName = match.Groups[2].Value.Trim();
 
-        // If diceName is empty (e.g. someone typed "/roll 3"), fall back to default d6
         if (string.IsNullOrEmpty(diceName)) diceName = "d6";
 
         var diceDef = _config.Dice.Find(d => d.Name.Equals(diceName, System.StringComparison.OrdinalIgnoreCase));
@@ -117,15 +115,12 @@ public partial class InterfaceView : CanvasLayer
             return;
         }
 
-        var die = new Die(diceDef.Name, diceDef.Faces.ToArray());
-        var results = new System.Collections.Generic.List<string>();
-        for (int i = 0; i < count; i++)
+        var main = GetTree().Root.GetNodeOrNull<Main>("Main");
+        if (main != null)
         {
-            die.Roll();
-            results.Add(die.LastResultValue);
+            var pool = new Dictionary<string, int> { [diceDef.Name] = count };
+            main.RollDicePool(pool);
         }
-
-        Log($"Rolled {count}{diceDef.Name}: [color=#ffffff]{string.Join(", ", results)}[/color]");
     }
 
     private void SetupGlobalTheme()

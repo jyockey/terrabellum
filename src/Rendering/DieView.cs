@@ -150,12 +150,16 @@ public partial class DieView : Node3D
         _mesh.AddChild(label);
     }
 
-    public void StartRoll()
+    public void StartRoll(bool skipRoll = false)
     {
-        _die.Roll();
+        if (!skipRoll) _die.Roll();
+        
         _isRolling = true;
         _rollTimer = _rollDuration;
         
+        // Randomize initial mesh orientation for variety
+        _mesh.Rotation = new Vector3(GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau);
+
         // Tuned for more realism: less "pop" and slower spin
         _velocity = new Vector3((GD.Randf() - 0.5f) * 1.2f, 2.5f, (GD.Randf() - 0.5f) * 1.2f);
         _angularVelocity = new Vector3(

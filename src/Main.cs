@@ -153,6 +153,8 @@ public partial class Main : Node
     {
         if (pool.Count == 0) return;
 
+        var poolLogs = new List<string>();
+
         // Calculate a spawn area in front of the camera or at center
         var camera = GetViewport().GetCamera3D();
         Vector3 spawnCenter = Vector3.Zero;
@@ -178,9 +180,13 @@ public partial class Main : Node
             var def = Config.Dice.Find(d => d.Name == entry.Key);
             if (def == null) continue;
 
+            var results = new List<string>();
             for (int i = 0; i < entry.Value; i++)
             {
                 var die = new Die(def.Name, def.Faces.ToArray());
+                die.Roll();
+                results.Add(die.LastResultValue);
+
                 var dieView = new DieView(die);
                 
                 int r = current / cols;
@@ -193,15 +199,16 @@ public partial class Main : Node
                 );
                 
                 dieView.Position = spawnCenter + offset;
-                // Randomize initial rotation for variety
-                dieView.Rotation = new Vector3(GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau);
                 
                 AddChild(dieView);
                 _diceViews.Add(dieView);
-                dieView.StartRoll();
+                dieView.StartRoll(true); // Result is already determined
                 current++;
             }
+            poolLogs.Add($"{entry.Value}{def.Name} ([color=#ffffff]{string.Join(", ", results)}[/color])");
         }
+
+        _interfaceView?.Log($"Rolling {string.Join(" + ", poolLogs)}");
     }
 
     public override void _UnhandledInput(InputEvent @event)
