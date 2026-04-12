@@ -10,11 +10,14 @@ public partial class Main : Node
 {
     public Tabletop Tabletop => _tabletop;
     public GameConfig Config { get; private set; } = new();
+    public GameState State { get; private set; } = new();
 
     private Tabletop _tabletop = new();
     private Dictionary<Unit, UnitView> _unitViews = new();
     private List<DieView> _diceViews = new();
     private InterfaceView? _interfaceView;
+    private CameraController? _camera;
+    private TabletopView? _tabletopInput;
 
     public UnitView? GetUnitView(Unit unit) => _unitViews.GetValueOrDefault(unit);
 
@@ -27,8 +30,22 @@ public partial class Main : Node
         Config = GameConfig.LoadFromFile(configPath) ?? new GameConfig { Name = "Default" };
         GD.Print($"Loaded Game Config: {Config.Name} ({Config.MeasurementUnit})");
 
-        // Setup UI
-        _interfaceView = new InterfaceView(Config);
+        // Setup Camera
+        _camera = new CameraController();
+        _camera.Position = new Vector3(0, RenderScale.ToWorld(600f), RenderScale.ToWorld(600f)); // 600mm up/back
+        _camera.LookAt(Vector3.Zero, Vector3.Up);
+        AddChild(_camera);
+
+        // Setup Input Hierachy (Tabletop View as base)
+        var inputLayer = new CanvasLayer { Layer = 0 };
+        _tabletopInput = new TabletopView();
+        _tabletopInput.Setup(_camera);
+        inputLayer.AddChild(_tabletopInput);
+        AddChild(inputLayer);
+
+        // Setup UI (Drawn above everything)
+        _interfaceView = new InterfaceView(Config, State);
+        _interfaceView.Layer = 1;
         AddChild(_interfaceView);
 
         // Setup 3D Environment
@@ -37,12 +54,6 @@ public partial class Main : Node
         // Setup Table
         var tableView = new TableView();
         AddChild(tableView);
-
-        // Setup Camera
-        var camera = new CameraController();
-        camera.Position = new Vector3(0, RenderScale.ToWorld(600f), RenderScale.ToWorld(600f)); // 600mm up/back
-        camera.LookAt(Vector3.Zero, Vector3.Up);
-        AddChild(camera);
 
         SetupDice();
 

@@ -13,7 +13,6 @@ public partial class UnitView : Node3D
 	private MeshInstance3D _baseMesh = new();
 	private MeshInstance3D _facingIndicator = new();
 	private Node3D? _modelNode;
-	private Label3D _label = new();
 	private StaticBody3D _body = new();
 	private CollisionShape3D _collisionShape = new();
 
@@ -33,7 +32,6 @@ public partial class UnitView : Node3D
 		_body.AddChild(_baseMesh);
 		_body.AddChild(_facingIndicator);
 		_body.AddChild(_collisionShape);
-		AddChild(_label);
 
 		if (_unit.Definition.Model != null && !string.IsNullOrEmpty(_unit.Definition.Model.Path))
 		{
@@ -161,16 +159,6 @@ public partial class UnitView : Node3D
 		_baseMesh.SetSurfaceOverrideMaterial(0, material);
 		_collisionShape.Shape = godotShape;
 		_collisionShape.Position = new Vector3(0, baseHeight / 2.0f, 0);
-
-		_label.Text = _unit.CustomName;
-		_label.FontSize = RenderScale.StandardFontSize;
-		_label.PixelSize = RenderScale.GetPixelSize(RenderScale.UnitLabelHeight);
-		_label.OutlineSize = RenderScale.StandardOutlineSize;
-		_label.Billboard = BaseMaterial3D.BillboardModeEnum.Enabled;
-		_label.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
-		// Position at standard unit height + standard label offset
-		float labelY = RenderScale.ToWorld(RenderScale.StandardUnitHeight + RenderScale.LabelOffset);
-		_label.Position = new Vector3(0, labelY, 0);
 	}
 
 	public override void _Process(double delta)
