@@ -46,10 +46,10 @@ def normalize_dice(name, vertices, faces):
     target_f2f = ratios.get(name, 1.0)
     scale_factor = target_f2f / current_f2f
     
-    return [[v[i] * scale_factor for i in range(3)] for v in vertices]
+    return [[v[i] * scale_factor for i in range(3)] for v in vertices], target_f2f
 
 def write_obj(name, vertices, faces):
-    vertices = normalize_dice(name, vertices, faces)
+    vertices, target_f2f = normalize_dice(name, vertices, faces)
     path = f"assets/models/dice/{name}.obj"
     os.makedirs(os.path.dirname(path), exist_ok=True)
     
@@ -108,7 +108,11 @@ def write_obj(name, vertices, faces):
         for n in out_n: f.write(f"vn {n[0]:.4f} {n[1]:.4f} {n[2]:.4f}\n")
         for poly in out_f: f.write("f " + " ".join(f"{v}//{n}" for v, n in poly) + "\n")
             
-    metadata[name] = face_meta
+    metadata[name] = {
+        "f2f_scale": target_f2f,
+        "is_bottom_result": (name == "d4"),
+        "faces": face_meta
+    }
     print(f"Generated {path}")
 
 phi = (1 + math.sqrt(5)) / 2
