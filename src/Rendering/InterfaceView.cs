@@ -8,7 +8,7 @@ namespace Terrabellum.Rendering;
 
 public partial class InterfaceView : CanvasLayer
 {
-    public enum InteractionMode { Select, Move, Measure }
+    public enum InteractionMode { Select, Move, Measure, Dice }
     
     private class InteractionModeDef
     {
@@ -22,7 +22,8 @@ public partial class InterfaceView : CanvasLayer
     {
         [InteractionMode.Select] = new() { Mode = InteractionMode.Select, Icon = "🖱️", Tooltip = "Selection Mode", Cursor = Input.CursorShape.Arrow },
         [InteractionMode.Move] = new() { Mode = InteractionMode.Move, Icon = "🖐️", Tooltip = "Movement Mode", Cursor = Input.CursorShape.PointingHand },
-        [InteractionMode.Measure] = new() { Mode = InteractionMode.Measure, Icon = "📏", Tooltip = "Measurement Mode", Cursor = Input.CursorShape.Arrow }
+        [InteractionMode.Measure] = new() { Mode = InteractionMode.Measure, Icon = "📏", Tooltip = "Measurement Mode", Cursor = Input.CursorShape.Arrow },
+        [InteractionMode.Dice] = new() { Mode = InteractionMode.Dice, Icon = "🎲", Tooltip = "Dice Mode", Cursor = Input.CursorShape.Arrow }
     };
 
     public InteractionMode CurrentMode { get; private set; } = InteractionMode.Select;
@@ -47,6 +48,11 @@ public partial class InterfaceView : CanvasLayer
     private bool _isSelectingFacing = false;
     private Line2D _pathLine = new();
     private Label _pathLabel = new();
+
+    // Dice Tray state
+    private Dictionary<string, int> _currentDicePool = new();
+    private PanelContainer _diceTray = new();
+    private VBoxContainer _poolContainer = new();
 
     public InterfaceView(GameConfig config, GameState state)
     {
@@ -201,6 +207,101 @@ public partial class InterfaceView : CanvasLayer
 
         // Console
         AddChild(_console);
+
+        // Dice Tray
+        SetupDiceTray();
+    }
+
+    private void SetupDiceTray()
+    {
+        _diceTray = new PanelContainer();
+        if (_globalTheme != null) _diceTray.Theme = _globalTheme;
+        _diceTray.MouseFilter = Control.MouseFilterEnum.Stop;
+        
+        var styleBox = new StyleBoxFlat();
+        styleBox.BgColor = new Color(0, 0, 0, 0.7f);
+        styleBox.SetContentMarginAll(15);
+        _diceTray.AddThemeStyleboxOverride("panel", styleBox);
+
+        _diceTray.SetAnchorsPreset(Control.LayoutPreset.BottomLeft);
+        _diceTray.GrowVertical = Control.GrowDirection.Begin; // Grow upwards
+        
+        // Position it in the bottom-left corner with some margin
+        _diceTray.OffsetLeft = 20;
+        _diceTray.OffsetBottom = -20;
+        // Reset top/right so they are determined by content size
+        _diceTray.OffsetTop = 0; 
+        _diceTray.OffsetRight = 0; 
+        
+        _diceTray.Hide();
+        AddChild(_diceTray);
+
+        var vbox = new VBoxContainer();
+        vbox.AddThemeConstantOverride("separation", 10);
+        _diceTray.AddChild(vbox);
+
+        var title = new Label { Text = "DICE POOL" };
+        title.AddThemeFontSizeOverride("font_size", 20);
+        vbox.AddChild(title);
+
+        var diceGrid = new GridContainer { Columns = 2 };
+        vbox.AddChild(diceGrid);
+
+        foreach (var dieDef in _config.Dice)
+        {
+            var btn = new Button { Text = dieDef.Name, CustomMinimumSize = new Vector2(100, 40) };
+            btn.Pressed += () => AddToPool(dieDef.Name);
+            diceGrid.AddChild(btn);
+        }
+
+        vbox.AddChild(new HSeparator());
+
+        _poolContainer = new VBoxContainer();
+        vbox.AddChild(_poolContainer);
+
+        var rollBtn = new Button { Text = "ROLL POOL", CustomMinimumSize = new Vector2(0, 50) };
+        rollBtn.Modulate = new Color(0.5f, 1.0f, 0.5f);
+        rollBtn.Pressed += RollPool;
+        vbox.AddChild(rollBtn);
+
+        var clearBtn = new Button { Text = "Clear", Flat = true };
+        clearBtn.Pressed += ClearPool;
+        vbox.AddChild(clearBtn);
+    }
+
+    private void AddToPool(string diceName)
+    {
+        if (!_currentDicePool.ContainsKey(diceName)) _currentDicePool[diceName] = 0;
+        _currentDicePool[diceName]++;
+        UpdatePoolUI();
+    }
+
+    private void ClearPool()
+    {
+        _currentDicePool.Clear();
+        UpdatePoolUI();
+    }
+
+    private void UpdatePoolUI()
+    {
+        foreach (var child in _poolContainer.GetChildren()) child.QueueFree();
+
+        foreach (var entry in _currentDicePool)
+        {
+            if (entry.Value <= 0) continue;
+            var label = new Label { Text = $"{entry.Value}x {entry.Key}" };
+            _poolContainer.AddChild(label);
+        }
+    }
+
+    private void RollPool()
+    {
+        if (_currentDicePool.Count == 0) return;
+        
+        var main = GetTree().Root.GetNodeOrNull<Main>("Main");
+        main?.RollDicePool(new Dictionary<string, int>(_currentDicePool));
+        
+        ClearPool();
     }
 
     public void Log(string message) => _console.AddEvent(message, _state.CurrentTurn);
@@ -234,6 +335,8 @@ public partial class InterfaceView : CanvasLayer
         {
             Input.SetDefaultCursorShape(def.Cursor);
         }
+
+        _diceTray.Visible = CurrentMode == InteractionMode.Dice;
     }
 
     public override void _UnhandledInput(InputEvent @event)

@@ -55,8 +55,6 @@ public partial class Main : Node
         var tableView = new TableView();
         AddChild(tableView);
 
-        SetupDice();
-
         // 2. Spawn units from config
         var orcDefinition = LoadUnit("centaur");
         var marineDefinition = LoadUnit("space_marine");
@@ -132,20 +130,6 @@ public partial class Main : Node
         AddChild(env);
     }
 
-    private void SetupDice()
-    {
-        float startX = -(Config.Dice.Count - 1) * 30f; // 30mm spacing
-        for (int i = 0; i < Config.Dice.Count; i++)
-        {
-            var def = Config.Dice[i];
-            var die = new Die(def.Name, def.Faces.ToArray());
-            var dieView = new DieView(die);
-            dieView.Position = RenderScale.ToWorldPos(new System.Numerics.Vector2(startX + (i * 60f), 400f), RenderScale.ToWorld(10f)); // 400mm forward, 10mm high
-            AddChild(dieView);
-            _diceViews.Add(dieView);
-        }
-    }
-
     private void SpawnUnit(UnitDefinition def, System.Numerics.Vector2 position, Color playerColor)
     {
         var unit = new Unit(def)
@@ -165,14 +149,62 @@ public partial class Main : Node
         _unitViews[unit] = view;
     }
 
-    public override void _UnhandledInput(InputEvent @event)
+    public void RollDicePool(Dictionary<string, int> pool)
     {
-        if (@event.IsActionPressed("ui_accept") || (@event is InputEventKey key && key.Pressed && key.Keycode == Key.Space))
+        if (pool.Count == 0) return;
+
+        // Calculate a spawn area in front of the camera or at center
+        var camera = GetViewport().GetCamera3D();
+        Vector3 spawnCenter = Vector3.Zero;
+        if (camera != null)
         {
-            foreach (var dieView in _diceViews)
+            // Spawn ~300mm in front of camera on the ground
+            Vector3 forward = -camera.GlobalTransform.Basis.Z;
+            forward.Y = 0;
+            if (forward.Length() > 0.1f)
             {
-                dieView.StartRoll();
+                spawnCenter = camera.GlobalPosition + forward.Normalized() * RenderScale.ToWorld(300f);
+                spawnCenter.Y = RenderScale.ToWorld(50f); // 50mm high
             }
         }
+
+        int totalDice = pool.Values.Sum();
+        float spacing = RenderScale.ToWorld(40f);
+        int cols = Mathf.CeilToInt(Mathf.Sqrt(totalDice));
+        
+        int current = 0;
+        foreach (var entry in pool)
+        {
+            var def = Config.Dice.Find(d => d.Name == entry.Key);
+            if (def == null) continue;
+
+            for (int i = 0; i < entry.Value; i++)
+            {
+                var die = new Die(def.Name, def.Faces.ToArray());
+                var dieView = new DieView(die);
+                
+                int r = current / cols;
+                int c = current % cols;
+                float jitter = RenderScale.ToWorld(5.0f); // 5mm jitter
+                Vector3 offset = new Vector3(
+                    (c - (cols-1)/2.0f) * spacing + (GD.Randf() - 0.5f) * jitter, 
+                    0, 
+                    (r - (cols-1)/2.0f) * spacing + (GD.Randf() - 0.5f) * jitter
+                );
+                
+                dieView.Position = spawnCenter + offset;
+                // Randomize initial rotation for variety
+                dieView.Rotation = new Vector3(GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau, GD.Randf() * Mathf.Tau);
+                
+                AddChild(dieView);
+                _diceViews.Add(dieView);
+                dieView.StartRoll();
+                current++;
+            }
+        }
+    }
+
+    public override void _UnhandledInput(InputEvent @event)
+    {
     }
 }
