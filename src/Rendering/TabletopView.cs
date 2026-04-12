@@ -17,7 +17,7 @@ public partial class TabletopView : Control
         Name = "TabletopView";
         SetAnchorsPreset(LayoutPreset.FullRect);
         FocusMode = FocusModeEnum.All;
-        MouseFilter = MouseFilterEnum.Pass; // Allow events to fall through to _UnhandledInput for selection
+        MouseFilter = MouseFilterEnum.Ignore; // Allow global cursor to show through
         
         // Connect to viewport size changes to ensure we always cover the screen
         GetViewport().SizeChanged += OnViewportResized;
@@ -32,24 +32,17 @@ public partial class TabletopView : Control
         Size = GetViewportRect().Size;
     }
 
-    public override void _GuiInput(InputEvent @event)
+    public override void _UnhandledInput(InputEvent @event)
     {
         // Handle Camera Panning Keys
         if (@event is InputEventKey keyEvent && !keyEvent.Echo)
         {
-            bool handled = false;
             switch (keyEvent.Keycode)
             {
-                case Key.W: _w = keyEvent.Pressed; handled = true; break;
-                case Key.S: _s = keyEvent.Pressed; handled = true; break;
-                case Key.A: _a = keyEvent.Pressed; handled = true; break;
-                case Key.D: _d = keyEvent.Pressed; handled = true; break;
-            }
-            
-            if (handled)
-            {
-                AcceptEvent();
-                return;
+                case Key.W: _w = keyEvent.Pressed; break;
+                case Key.S: _s = keyEvent.Pressed; break;
+                case Key.A: _a = keyEvent.Pressed; break;
+                case Key.D: _d = keyEvent.Pressed; break;
             }
         }
 
@@ -57,8 +50,6 @@ public partial class TabletopView : Control
         if (@event is InputEventMouseMotion mouseMotion && Input.IsMouseButtonPressed(MouseButton.Middle))
         {
             _camera?.Rotate(mouseMotion.Relative);
-            AcceptEvent();
-            return;
         }
 
         // Handle Camera Zoom (Scroll)
@@ -67,12 +58,10 @@ public partial class TabletopView : Control
             if (mouseButton.ButtonIndex == MouseButton.WheelUp)
             {
                 _camera?.Zoom(-1.0f);
-                AcceptEvent();
             }
             else if (mouseButton.ButtonIndex == MouseButton.WheelDown)
             {
                 _camera?.Zoom(1.0f);
-                AcceptEvent();
             }
 
             // Clicking the tabletop should reclaim focus from other UI elements
